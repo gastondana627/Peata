@@ -170,3 +170,7 @@ credentials.json
 database.json
 .streamlit/
 
+# Ignore Google Cloud SDK and CLI installation files
+google-cloud-sdk-latest-darwin-x86_64.tar.gz
+google-cloud-cli-darwin-x86_64.tar.gz
+google-cloud-sdk/

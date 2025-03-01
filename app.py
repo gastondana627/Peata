@@ -1,3 +1,5 @@
+# app.py
+
 import sys
 print(f"Python Executable used by Streamlit: {sys.executable}") # VERIFY PYTHON PATH - KEEP THIS
 
@@ -6,10 +8,11 @@ import os
 from pet_matcher import find_match # Ensure this import path is correct
 import json
 import streamlit.components.v1 as components
-import hashlib  # For password hashing (simplified)
+import hashlib  # For password hashing (simplified) - WILL BE UPDATED
 import datetime  # Import datetime module
 import pandas as pd  # Import pandas for dataframe
 import importlib # For programmatic import check - NEW
+import toml # Added for secrets.toml
 
 # --- Check if cv2 (OpenCV) is importable --- # NEW
 try:
@@ -52,7 +55,16 @@ def save_credentials(credentials, leaderboard):
 
 # --- HASH PASSWORD (SIMPLE) ---
 def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()  # NEVER DO THIS IN PRODUCTION
+    # NEVER DO THIS IN PRODUCTION, USE BCRYPT OR SCRYPT
+    return hashlib.sha256(password.encode()).hexdigest()
+
+# --- LOAD SECRETS TOML ---
+def load_secrets_toml():
+    try:
+        return toml.load("secrets.toml")
+    except FileNotFoundError:
+        print("Error: secrets.toml not found.")
+        return None
 
 # Sample data for animals
 animals = [ # ... your animal data ... ] # (Full animal list - same as previous response)
@@ -100,6 +112,8 @@ animals = [ # ... your animal data ... ] # (Full animal list - same as previous 
     {"name": "Blondie", "breed": "Domestic Shorthair", "age": 5, "image": "Blondie.jpg"},
     {"name": "BB", "breed": "Domestic Shorthair", "age": 2, "image": "BB.jpg"},
     {"name": "Frankie", "breed": "Domestic Shorthair", "age": "3", "image": "Frankie.jpg"},
+    # app.py (continued)
+
     {"name": "Angel", "breed": "Domestic Shorthair", "age": 1, "image": "Angel.jpg"},
     {"name": "Winnie", "breed": "Domestic Shorthair", "age": 4, "image": "Winnie.jpg"},
     {"name": "Gary", "breed": "Domestic Shorthair", "age": 2, "image": "Gary.jpg"},
@@ -266,6 +280,8 @@ def login():
             st.rerun()
         else:
             st.error("Invalid credentials.")
+
+
 
 # --- Share Pet Function (Persistence Verified) ---
 def share_pet(pet_name):
@@ -559,8 +575,6 @@ else:
     # --- Feedback section ---
     st.subheader("🌟 Feedback")
     feedback_text = st.text_area("Share your feedback!")
-    st.button("Submit Feedback")
-
-                                
+    st.button("Submit Feedback")               
 
 
