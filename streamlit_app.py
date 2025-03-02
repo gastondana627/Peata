@@ -1,6 +1,5 @@
-# app.py
-
 import sys
+
 print(f"Python Executable used by Streamlit: {sys.executable}") # VERIFY PYTHON PATH - KEEP THIS
 
 import streamlit as st
@@ -8,18 +7,23 @@ import os
 from pet_matcher import find_match # Ensure this import path is correct
 import json
 import streamlit.components.v1 as components
-import hashlib  # For password hashing (simplified) - WILL BE UPDATED
-import datetime  # Import datetime module
-import pandas as pd  # Import pandas for dataframe
+import hashlib
+import datetime # Import datetime module
+import pandas as pd # Import pandas for dataframe
 import importlib # For programmatic import check - NEW
 import toml # Added for secrets.toml
 
 # --- Check if cv2 (OpenCV) is importable --- # NEW
+
+
 try:
     import cv2
+
     print("OpenCV (cv2) is successfully imported within app.py!") # Success message
 except ImportError as e:
     print(f"Error importing cv2 within app.py: {e}") # Error message if import fails
+
+import urllib.parse # Add this line here
 
 # --- IMAGE FOLDERS ---
 IMAGE_FOLDER_CATS = "img/cats"
@@ -45,7 +49,8 @@ def load_credentials():
             leaderboard = credentials.get('leaderboard', {})
             return credentials, leaderboard
     except FileNotFoundError:
-        return {}, {}  # Return empty if file not found
+        return {}, {}
+    # Return empty if file not found
 
 # --- SAVE CREDENTIALS ---
 def save_credentials(credentials, leaderboard):
@@ -67,7 +72,8 @@ def load_secrets_toml():
         return None
 
 # Sample data for animals
-animals = [ # ... your animal data ... ] # (Full animal list - same as previous response)
+animals = [
+    # ... your animal data ...
     {"name": "Hay Hay", "breed": "Chicken", "age": 1, "type": "Other", "image": "Hay Hay.jpg", "description": "A lovely chicken looking for a home."},
     # Cats
     {"name": "Sam", "breed": "Domestic Shorthair", "age": 2, "image": "Sam.jpg"},
@@ -112,8 +118,6 @@ animals = [ # ... your animal data ... ] # (Full animal list - same as previous 
     {"name": "Blondie", "breed": "Domestic Shorthair", "age": 5, "image": "Blondie.jpg"},
     {"name": "BB", "breed": "Domestic Shorthair", "age": 2, "image": "BB.jpg"},
     {"name": "Frankie", "breed": "Domestic Shorthair", "age": "3", "image": "Frankie.jpg"},
-    # app.py (continued)
-
     {"name": "Angel", "breed": "Domestic Shorthair", "age": 1, "image": "Angel.jpg"},
     {"name": "Winnie", "breed": "Domestic Shorthair", "age": 4, "image": "Winnie.jpg"},
     {"name": "Gary", "breed": "Domestic Shorthair", "age": 2, "image": "Gary.jpg"},
@@ -227,6 +231,28 @@ NUM_PAGES = (len(animals) + ANIMALS_PER_PAGE - 1) // ANIMALS_PER_PAGE
 
 # Streamlit setup
 st.set_page_config(page_title="Animal Shelter", layout="wide")
+st.markdown(
+    """
+    <style>
+    .social-button {
+        background-color: #4CAF50; /* Green */
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin: 4px 2px;
+        cursor: pointer;
+        border-radius: 5px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+
 st.title("Welcome to the Local Animal Shelter!")
 st.write("Here you can meet some of the animals available for adoption.")
 
@@ -237,7 +263,7 @@ if 'username' not in st.session_state:
 def create_account():
     new_username = st.text_input("New Username:")
     new_password = st.text_input("New Password:", type="password")
-
+    
     # Survey Questions
     st.write("Tell us about your ideal pet:")
     has_children = st.checkbox("Do you have children?")
@@ -245,13 +271,14 @@ def create_account():
     preferred_size = st.selectbox("Preferred size:", ["Small", "Medium", "Large"])
     activity_level = st.select_slider("Preferred activity level:", options=["Low", "Moderate", "High"])
     preferred_pet = st.selectbox("Do you prefer:", ["Cats", "Dogs", "Both"])
-
+    
     if st.button("Create Account"):
         credentials, leaderboard = load_credentials() # Load leaderboard
         if new_username in credentials:
             st.error("Username already exists.")
         else:
-            hashed_password = hash_password(new_password)  # Hash password
+            hashed_password = hash_password(new_password)
+            # Hash password
             credentials[new_username] = {
                 "password": hashed_password,
                 "has_children": has_children,
@@ -259,11 +286,12 @@ def create_account():
                 "preferred_size": preferred_size,
                 "activity_level": activity_level,
                 "preferred_pet": preferred_pet,
-                "share_history": [],  # Initialize share history
+                "share_history": [],
+                # Initialize share history
                 "lost_pet_history": [], # Initialize lost pet history,
                 "found_pet_history": [], # Initialize found pet history - NEW
             }
-            save_credentials(credentials, leaderboard)  # Save credentials and leaderboard
+            save_credentials(credentials, leaderboard)# Save credentials and leaderboard
             st.success("Account created! Please sign in.")
             st.session_state['username'] = new_username
             st.rerun()
@@ -291,30 +319,26 @@ def share_pet(pet_name):
         credentials, leaderboard = load_credentials()
         user_data = credentials.get(username, {})
         share_history = user_data.get('share_history', [])
-
         now = datetime.datetime.now()
         timestamp_str = now.strftime("%Y-%m-%d %H:%M:%S")
-
+        
         share_history.append({
             "pet_name": pet_name,
             "timestamp": timestamp_str,
             "points_earned": 5,
         })
         credentials[username]['share_history'] = share_history
-
-        if username not in leaderboard:
-            leaderboard[username] = 0
-        leaderboard[username] += 5
-        st.session_state['leaderboard'] = leaderboard
-
-        save_credentials(credentials, leaderboard) # SAVE - Point persistence
-
-        # Share receipt
-        st.success(f"Share Receipt:")
-        st.write(f"- Pet: {pet_name}")
-        st.write(f"- Date/Time: {timestamp_str}")
-        st.write(f"- Points Earned: 5")
-        # st.rerun() # Removed rerun to persist form data
+    if username not in leaderboard:
+        leaderboard[username] = 0
+    leaderboard[username] += 5
+    st.session_state['leaderboard'] = leaderboard
+    save_credentials(credentials, leaderboard) # SAVE - Point persistence
+        #Share receipt
+    st.success(f"Share Receipt:")
+    st.write(f"- Pet: {pet_name}")
+    st.write(f"- Date/Time: {timestamp_str}")
+    st.write(f"- Points Earned: 5")
+    # st.rerun() # Removed rerun to persist form data
 
 # --- Report Lost Pet Function (Points Added) ---
 def report_lost_pet_points(pet_name, pet_breed):
@@ -324,10 +348,10 @@ def report_lost_pet_points(pet_name, pet_breed):
         credentials, leaderboard = load_credentials()
         user_data = credentials.get(username, {})
         lost_pet_history = user_data.get('lost_pet_history', [])
-
+        
         now = datetime.datetime.now()
         timestamp_str = now.strftime("%Y-%m-%d %H:%M:%S")
-
+        
         lost_pet_history.append({
             "pet_name": pet_name,
             "pet_breed": pet_breed,
@@ -335,14 +359,14 @@ def report_lost_pet_points(pet_name, pet_breed):
             "points_earned": 5,
         })
         credentials[username]['lost_pet_history'] = lost_pet_history
-
+        
         if username not in leaderboard:
             leaderboard[username] = 0
         leaderboard[username] += 5
         st.session_state['leaderboard'] = leaderboard
-
+        
         save_credentials(credentials, leaderboard) # SAVE - Point persistence
-
+        
         # Report receipt - still shown
         st.success(f"Lost Pet Reported Successfully!") # Updated success message
         st.write(f"Lost Pet Report Receipt:")
@@ -361,23 +385,24 @@ def report_found_pet_points():
         credentials, leaderboard = load_credentials()
         user_data = credentials.get(username, {})
         found_pet_history = user_data.get('found_pet_history', []) # Get found pet history
-
+        
         now = datetime.datetime.now()
         timestamp_str = now.strftime("%Y-%m-%d %H:%M:%S")
-
+        
         found_pet_history.append({ # Save to found pet history
             "timestamp": timestamp_str,
             "points_earned": 5,
         })
         credentials[username]['found_pet_history'] = found_pet_history # Update credentials
-
+        
         if username not in leaderboard:
             leaderboard[username] = 0
         leaderboard[username] += 5
         st.session_state['leaderboard'] = leaderboard
-
+        
         save_credentials(credentials, leaderboard) # SAVE - Point persistence
-
+        
+        
         # Report receipt - still shown
         st.success(f"Found Pet Reported Successfully!") # Updated success message
         st.write(f"Found Pet Report Receipt:")
@@ -397,10 +422,10 @@ def display_user_history():
         lost_pet_history = user_data.get('lost_pet_history', []) # Retrieve lost pet history
         found_pet_history = user_data.get('found_pet_history', []) # Retrieve found pet history - NEW
         total_points = st.session_state['leaderboard'].get(username, 0)
-
+        
         st.sidebar.header(f"Your History, {username}")
         st.sidebar.subheader(f"Total Points: {total_points}")
-
+        
         if share_history:
             st.sidebar.write("---")
             st.sidebar.subheader("Share Log:")
@@ -432,39 +457,38 @@ else:
     display_user_history_button = st.sidebar.button("My History & Points")
     if display_user_history_button:
         display_user_history()
-
+        
     # --- Lost Pet Section ---
     st.header("Lost Pet Reunification Hub")
     st.markdown(
-        """
+        
+    """
     This hub helps reunite lost pets with their owners.
     **Report a found pet:** Upload a photo. AI matching will attempt to find the owner. Earn points for reporting!
     **Report a lost pet:** Fill the form below with pet info and photo. Earn points for reporting! We'll notify you of matches.
     """
     )
     uploaded_file = st.file_uploader("Upload photo of found pet", type=["jpg", "jpeg", "png"])
-
+    
     # --- Initialize session state for message visibility ---
     if 'match_message_visible' not in st.session_state:
         st.session_state['match_message_visible'] = False
     if 'report_message_visible' not in st.session_state:
         st.session_state['report_message_visible'] = False
-
-    if uploaded_file is not None:
+    
+    if uploaded_file is not None: #Check to see if we are not none.
+        
         st.image(uploaded_file, caption="Found Pet", width=200)
         match = find_match(uploaded_file)
-        if match:
+        if match: # make sure match isn't none
             st.success(f"Possible match: {match}")
             st.write("Contact shelter to confirm.")
-            st.session_state['match_message_visible'] = True # Set match message to visible
-            st.balloons() # Add celebratory animation!
-
+            st.session_state['match_message_visible'] = True
+            st.balloons()
         else:
             st.info("No matches found. Check back later.")
-            st.session_state['match_message_visible'] = True # Set no match message to visible - can adjust if needed
-
-        report_found_pet_points() # Award points for found pet report - NEW
-        st.session_state['report_message_visible'] = True # Set report success messages to visible
+        st.session_state['match_message_visible'] = True # Set no match message to visible - can adjust if needed report_found_pet_points() # Award points for found pet report - NEW
+        st.session_state['report_message_visible'] = True  # Set report success messages to visible
 
     # --- Conditionally display messages based on session state ---
     if st.session_state['match_message_visible']: # Check visibility for match message
@@ -479,23 +503,25 @@ else:
         st.write(f"Found Pet Report Receipt:")
         st.write(f"- Date/Time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}") # Get current timestamp dynamically
         st.write(f"- Points Earned: 5")
+
         if st.button("Continue", key="continue_report"): # Add Continue button for report section
             st.session_state['report_message_visible'] = False # Reset report message visibility
             st.session_state['match_message_visible'] = False # Also clear match messages when "Continue" from report is clicked - optional, adjust as desired
             st.rerun() # Rerun to clear messages
 
-
     # --- Lost Pet Reporting Form ---
-    st.subheader("Report a Lost Pet (Earn Points!)") # Updated subtitle to indicate points
+    st.subheader("Report a Lost Pet (Earn Points!)")  # Updated subtitle to indicate points
     lost_pet_name = st.text_input("Pet's Name:")
     lost_pet_breed = st.text_input("Pet's Breed:")
     lost_pet_image = st.file_uploader("Upload lost pet photo", type=["jpg", "jpeg", "png"], key="lost_pet_image")
+
     if lost_pet_image:
         st.image(lost_pet_image, caption="Lost Pet", width=200)
+
     if st.button("Report Lost Pet"):
         if lost_pet_image is None: # **Error Handling: Check if image is uploaded**
             st.error("Please upload an image of the lost pet to submit the report.") # Display error message
-        else: # Proceed with report submission if image is uploaded
+        else:  # Proceed with report submission if image is uploaded
             data = load_data()
             data["lost_pets"].append({
                 "name": lost_pet_name,
@@ -503,8 +529,7 @@ else:
                 "image": lost_pet_image.name if lost_pet_image else None,
             })
             save_data(data)
-            report_lost_pet_points(lost_pet_name, lost_pet_breed) # Call new function to award points
-
+            report_lost_pet_points(lost_pet_name, lost_pet_breed)  # Call new function to award points
 
     # --- Animals Available for Adoption Section ---
     st.header("Animals Available for Adoption")
@@ -541,15 +566,54 @@ else:
                     """,
                     height=50,
                 )
+
+                # --- SHARE BUTTON WITH PROMPT ---
                 if st.button(f"Share {pet['name']}!", key=f"share_animals_{pet['name']}"):
-                    share_pet(pet['name'])
+                    st.session_state['pet_to_share'] = pet['name']  # store the pet name
+                    st.session_state['share_prompt'] = not st.session_state.get('share_prompt', False) # Toggle the prompt
+
+                if st.session_state.get('share_prompt', False) and st.session_state.get('pet_to_share') == pet['name']:
+                    st.write(f"Share {pet['name']} on:")
+
+                    col1, col2, col3 = st.columns(3)
+
+                    with col1:
+                        components.html(
+                            f"""
+                            <a href="https://www.facebook.com/" target="_blank">
+                            <button class="social-button">Facebook</button>
+                            </a>
+                            """,
+                            height=50,
+                        )
+
+                    with col2:
+                        components.html(
+                            f"""
+                            <a href="https://x.com/" target="_blank">
+                            <button class="social-button">X/Twitter</button>
+                            </a>
+                            """,
+                            height=50,
+                        )
+
+                    with col3:
+                        components.html(
+                            f"""
+                            <a href="https://www.snapchat.com/" target="_blank">
+                            <button class="social-button">Snapchat</button>
+                            </a>
+                            """,
+                            height=50,
+                        )
+                            
                 st.write("---")
         except Exception as e:
             st.error(f"Error displaying {pet['name']}: {e}")
         pet_index += 1
 
     # --- Adopted Animals Section (Initially Empty) ---
-    st.header("Adopted Animals") # Section header - initially empty
+    st.header("Adopted Animals")  # Section header - initially empty
     st.write("This section will display animals that have already been adopted. (Currently empty)")
     # ---  You can add logic here later to display adopted animals if you have a separate list ---
     # --- For now, it's just a header and informational text ---
@@ -573,8 +637,29 @@ else:
         st.write("No shares yet!")
 
     # --- Feedback section ---
+    secrets = load_secrets_toml()
+
     st.subheader("🌟 Feedback")
     feedback_text = st.text_area("Share your feedback!")
-    st.button("Submit Feedback")               
+
+    # Function to use HTML to submit the form
+    def submit_form(endpoint, data):
+        html_code = f"""
+        <form action="{endpoint}" method="POST">
+            <input type="hidden" name="feedback" value="{data}">
+            <button type="submit">Submit Feedback</button>
+        </form>
+        """
+        return html_code
+
+    if secrets and "FORMSPREE_ENDPOINT" in secrets:  # Check if secrets is not empty
+        form_endpoint = secrets["FORMSPREE_ENDPOINT"]
+    else:
+        form_endpoint = None
+        st.error("Formspree endpoint not found! Make sure that your secrets.toml is properly updated.")
+
+    if form_endpoint:
+        html_form = submit_form(form_endpoint, feedback_text)
+        components.html(html_form, height=100)
 
 

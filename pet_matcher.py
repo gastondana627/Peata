@@ -1,6 +1,6 @@
 import cv2
 import os
-import numpy as np # ADDED: Import numpy
+import numpy as np
 from google.oauth2 import service_account
 from google.cloud import aiplatform
 import toml
@@ -58,47 +58,64 @@ def find_match(uploaded_image):
 
     # Initialize ORB detector
     orb = cv2.ORB_create()
+    if uploaded_image is None:
+        print("No image uploaded. Returning None.")
+        return None  # Or some other suitable default
 
-    # Convert uploaded image to OpenCV format
-    file_bytes = np.asarray(bytearray(uploaded_image.read()), dtype=np.uint8)
-    uploaded_image_cv = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+    try:
+        # Convert uploaded image to OpenCV format
+        file_bytes = np.asarray(bytearray(uploaded_image.read()), dtype=np.uint8)
+        uploaded_image_cv = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
 
-    # Find keypoints and descriptors for the uploaded image
-    keypoints_uploaded, descriptors_uploaded = orb.detectAndCompute(uploaded_image_cv, None)
+        if uploaded_image_cv is None:
+            print("Failed to decode image using cv2.imdecode")
+            return None  # Handle the case where image decoding fails
 
-    # Function to compare descriptors and find matches
-    def compare_descriptors(descriptors1, descriptors2):
-        if descriptors1 is None or descriptors2 is None:
-            return 0
-        bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-        matches = bf.match(descriptors1, descriptors2)
-        return len(matches)
+        # Find keypoints and descriptors for the uploaded image
+        keypoints_uploaded, descriptors_uploaded = orb.detectAndCompute(uploaded_image_cv, None)
 
-    # Iterate through cat images
-    for filename in os.listdir(IMAGE_FOLDER_CATS):
-        if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-            image_path = os.path.join(IMAGE_FOLDER_CATS, filename)
-            shelter_image = cv2.imread(image_path)
-            if shelter_image is not None:
-                keypoints_shelter, descriptors_shelter = orb.detectAndCompute(shelter_image, None)
-                matches = compare_descriptors(descriptors_uploaded, descriptors_shelter)
-                if matches > max_matches and matches > 10:  # Added a minimum match threshold
-                    max_matches = matches
-                    best_match_name = filename
+        # Function to compare descriptors and find matches
+        def compare_descriptors(descriptors1, descriptors2):
+            if descriptors1 is None or descriptors2 is None:
+                return 0
+            bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+            matches = bf.match(descriptors1, descriptors2)
+            return len(matches)
 
-    # Iterate through other images
-    for filename in os.listdir(IMAGE_FOLDER_OTHER):
-        if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-            image_path = os.path.join(IMAGE_FOLDER_OTHER, filename)
-            shelter_image = cv2.imread(image_path)
-            if shelter_image is not None:
-                keypoints_shelter, descriptors_shelter = orb.detectAndCompute(shelter_image, None)
-                matches = compare_descriptors(descriptors_uploaded, descriptors_shelter)
-                if matches > max_matches and matches > 10:  # Added a minimum match threshold
-                    max_matches = matches
-                    best_match_name = filename
+        # Iterate through cat images
+        for filename in os.listdir(IMAGE_FOLDER_CATS):
+            if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+                image_path = os.path.join(IMAGE_FOLDER_CATS, filename)
+                shelter_image = cv2.imread(image_path)
+                if shelter_image is not None:
+                    keypoints_shelter, descriptors_shelter = orb.detectAndCompute(shelter_image, None)
+                    matches = compare_descriptors(descriptors_uploaded, descriptors_shelter)
+                    if matches > max_matches and matches > 10:  # Added a minimum match threshold
+                        max_matches = matches
+                        best_match_name = filename
+
+        # Iterate through other images
+        for filename in os.listdir(IMAGE_FOLDER_OTHER):
+            if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+                image_path = os.path.join(IMAGE_FOLDER_OTHER, filename)
+                shelter_image = cv2.imread(image_path)
+                if shelter_image is not None:
+                    keypoints_shelter, descriptors_shelter = orb.detectAndCompute(shelter_image, None)
+                    matches = compare_descriptors(descriptors_uploaded, descriptors_shelter)
+                    if matches > max_matches and matches > 10:  # Added a minimum match threshold
+                        max_matches = matches
+                        best_match_name = filename
+
+    except Exception as e:
+        print(f"Error in find_match function: {e}")
+        return None  # Handle any error during processing
 
     if best_match_name:
         return best_match_name
     else:
         return None
+
+
+
+
+
