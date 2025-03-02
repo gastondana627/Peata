@@ -13,6 +13,10 @@ import pandas as pd # Import pandas for dataframe
 import importlib # For programmatic import check - NEW
 import toml # Added for secrets.toml
 
+import streamlit as st
+print("Contents of st.secrets:")
+print(st.secrets)
+
 # --- Check if cv2 (OpenCV) is importable --- # NEW
 
 
@@ -636,30 +640,28 @@ else:
     else:
         st.write("No shares yet!")
 
-    # --- Feedback section ---
-    secrets = load_secrets_toml()
+       # --- Feedback section ---
+    # secrets = load_secrets_toml() #this line is unnecessary
 
     st.subheader("🌟 Feedback")
-    feedback_text = st.text_area("Share your feedback!")
 
-    # Function to use HTML to submit the form
-    def submit_form(endpoint, data):
-        html_code = f"""
-        <form action="{endpoint}" method="POST">
-            <input type="hidden" name="feedback" value="{data}">
-            <button type="submit">Submit Feedback</button>
-        </form>
-        """
-        return html_code
+    with st.form("feedback_form"):
+        feedback_text = st.text_area("Share your feedback!")
+        submitted = st.form_submit_button("Submit Feedback")
 
-    if secrets and "FORMSPREE_ENDPOINT" in secrets:  # Check if secrets is not empty
-        form_endpoint = secrets["FORMSPREE_ENDPOINT"]
-    else:
-        form_endpoint = None
-        st.error("Formspree endpoint not found! Make sure that your secrets.toml is properly updated.")
+        if submitted:
+            if "FORMSPREE_ENDPOINT" in st.secrets:  # Access secret directly from st.secrets
+                form_endpoint = st.secrets["FORMSPREE_ENDPOINT"]
+                try:
+                    import requests  # Import requests here
 
-    if form_endpoint:
-        html_form = submit_form(form_endpoint, feedback_text)
-        components.html(html_form, height=100)
-
+                    response = requests.post(form_endpoint, data={"feedback": feedback_text})
+                    if response.status_code == 200:
+                        st.success("Thank you for your feedback!")
+                    else:
+                        st.error(f"Error submitting feedback: {response.status_code} - {response.text}")
+                except Exception as e:
+                    st.error(f"An error occurred: {e}")
+            else:
+                st.error("Formspree endpoint not found! Make sure that your secrets.toml is properly updated.")
 
