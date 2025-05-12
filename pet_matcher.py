@@ -1,3 +1,4 @@
+# pet_matcher.py
 import cv2
 import os
 import numpy as np
@@ -5,7 +6,7 @@ from google.oauth2 import service_account
 from google.cloud import aiplatform
 import toml
 
-IMAGE_FOLDER_CATS = "img/cats"  # Define image folder paths here to match app.py
+IMAGE_FOLDER_CATS = "img/cats"
 IMAGE_FOLDER_OTHER = "img/other"
 
 def load_gcp_credentials():
@@ -29,7 +30,7 @@ def initialize_vertex_ai(credentials, project_id, location):
     """Initializes Vertex AI with the provided credentials."""
     aiplatform.init(project=project_id, location=location, credentials=credentials)
 
-#Example of use.
+# Example of use.
 gcp_creds = load_gcp_credentials()
 secret_data = load_secret_toml()
 
@@ -44,7 +45,7 @@ else:
 def find_match(uploaded_image):
     """
     Finds the best match for the uploaded image among shelter pet images
-    using ORB feature matching with OpenCV.
+    using ORB feature matching with ratio test.
 
     Args:
         uploaded_image: Uploaded file object (Streamlit UploadedFile).
@@ -52,35 +53,41 @@ def find_match(uploaded_image):
     Returns:
         str: Name of the best matching pet, or None if no good match found.
     """
-
     best_match_name = None
-    max_matches = 0
+    max_good_matches = 0
+    MIN_MATCH_COUNT = 15  # Increased minimum matches
+    RATIO_THRESHOLD = 0.75 # Threshold for Lowe's ratio test
 
-    # Initialize ORB detector
+    # Initialize ORB detector and BFMatcher
     orb = cv2.ORB_create()
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING)
+
     if uploaded_image is None:
         print("No image uploaded. Returning None.")
-        return None  # Or some other suitable default
+        return None
 
     try:
-        # Convert uploaded image to OpenCV format
         file_bytes = np.asarray(bytearray(uploaded_image.read()), dtype=np.uint8)
         uploaded_image_cv = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
 
         if uploaded_image_cv is None:
-            print("Failed to decode image using cv2.imdecode")
-            return None  # Handle the case where image decoding fails
+            print("Failed to decode uploaded image.")
+            return None
 
-        # Find keypoints and descriptors for the uploaded image
         keypoints_uploaded, descriptors_uploaded = orb.detectAndCompute(uploaded_image_cv, None)
+        if descriptors_uploaded is None or len(keypoints_uploaded) < 3:
+            print("Not enough keypoints detected in the uploaded image.")
+            return None
 
-        # Function to compare descriptors and find matches
-        def compare_descriptors(descriptors1, descriptors2):
-            if descriptors1 is None or descriptors2 is None:
-                return 0
-            bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-            matches = bf.match(descriptors1, descriptors2)
-            return len(matches)
+        def find_good_matches(kp1, des1, kp2, des2, ratio_thresh):
+            if des1 is None or des2 is None:
+                return []
+            matches = bf.knnMatch(des1, des2, k=2)
+            good_matches = []
+            for m, n in matches:
+                if m.distance < ratio_thresh * n.distance:
+                    good_matches.append(m)
+            return len(good_matches)
 
         # Iterate through cat images
         for filename in os.listdir(IMAGE_FOLDER_CATS):
@@ -89,10 +96,11 @@ def find_match(uploaded_image):
                 shelter_image = cv2.imread(image_path)
                 if shelter_image is not None:
                     keypoints_shelter, descriptors_shelter = orb.detectAndCompute(shelter_image, None)
-                    matches = compare_descriptors(descriptors_uploaded, descriptors_shelter)
-                    if matches > max_matches and matches > 10:  # Added a minimum match threshold
-                        max_matches = matches
-                        best_match_name = filename
+                    if descriptors_shelter is not None and len(keypoints_shelter) >= 3:
+                        good_matches = find_good_matches(keypoints_uploaded, descriptors_uploaded, keypoints_shelter, descriptors_shelter, RATIO_THRESHOLD)
+                        if good_matches > max_good_matches and good_matches > MIN_MATCH_COUNT:
+                            max_good_matches = good_matches
+                            best_match_name = filename
 
         # Iterate through other images
         for filename in os.listdir(IMAGE_FOLDER_OTHER):
@@ -101,21 +109,18 @@ def find_match(uploaded_image):
                 shelter_image = cv2.imread(image_path)
                 if shelter_image is not None:
                     keypoints_shelter, descriptors_shelter = orb.detectAndCompute(shelter_image, None)
-                    matches = compare_descriptors(descriptors_uploaded, descriptors_shelter)
-                    if matches > max_matches and matches > 10:  # Added a minimum match threshold
-                        max_matches = matches
-                        best_match_name = filename
+                    if descriptors_shelter is not None and len(keypoints_shelter) >= 3:
+                        good_matches = find_good_matches(keypoints_uploaded, descriptors_uploaded, keypoints_shelter, descriptors_shelter, RATIO_THRESHOLD)
+                        if good_matches > max_good_matches and good_matches > MIN_MATCH_COUNT:
+                            max_good_matches = good_matches
+                            best_match_name = filename
 
     except Exception as e:
         print(f"Error in find_match function: {e}")
-        return None  # Handle any error during processing
+        return None
 
     if best_match_name:
         return best_match_name
     else:
         return None
-
-
-
-
 
