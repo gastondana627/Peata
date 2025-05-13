@@ -1,4 +1,3 @@
-# pet_matcher.py
 import cv2
 import os
 import numpy as np
@@ -19,6 +18,7 @@ def load_gcp_credentials():
         return None
 
 def load_secret_toml():
+    """Loads the secrets.toml file."""
     try:
         data = toml.load("secrets.toml")
         return data
@@ -45,22 +45,16 @@ else:
 def find_match(uploaded_image):
     """
     Finds the best match for the uploaded image among shelter pet images
-    using ORB feature matching with ratio test.
-
-    Args:
-        uploaded_image: Uploaded file object (Streamlit UploadedFile).
-
-    Returns:
-        str: Name of the best matching pet, or None if no good match found.
+    using ORB feature matching with ratio test and homography estimation.
     """
     best_match_name = None
-    max_good_matches = 0
-    MIN_MATCH_COUNT = 15  # Increased minimum matches
-    RATIO_THRESHOLD = 0.75 # Threshold for Lowe's ratio test
+    max_inliers = 0
+    MIN_INLIERS = 15  # Increased minimum number of inlier matches required
+    RATIO_THRESHOLD = 0.7 # Strict ratio threshold
 
-    # Initialize ORB detector and BFMatcher
-    orb = cv2.ORB_create()
-    bf = cv2.BFMatcher(cv2.NORM_HAMMING)
+    # Initialize ORB detector and BFMatcher with crossCheck
+    orb = cv2.ORB_create(nfeatures=2000) # Increase number of features
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
 
     if uploaded_image is None:
         print("No image uploaded. Returning None.")
@@ -79,41 +73,40 @@ def find_match(uploaded_image):
             print("Not enough keypoints detected in the uploaded image.")
             return None
 
-        def find_good_matches(kp1, des1, kp2, des2, ratio_thresh):
-            if des1 is None or des2 is None:
-                return []
+        def find_good_matches_homography(kp1, des1, kp2, des2, ratio_thresh):
+            if des1 is None or des2 is None or len(kp1) < 10 or len(kp2) < 10: # Increased min keypoints
+                return 0, None
             matches = bf.knnMatch(des1, des2, k=2)
             good_matches = []
             for m, n in matches:
                 if m.distance < ratio_thresh * n.distance:
                     good_matches.append(m)
-            return len(good_matches)
 
-        # Iterate through cat images
-        for filename in os.listdir(IMAGE_FOLDER_CATS):
-            if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-                image_path = os.path.join(IMAGE_FOLDER_CATS, filename)
-                shelter_image = cv2.imread(image_path)
-                if shelter_image is not None:
-                    keypoints_shelter, descriptors_shelter = orb.detectAndCompute(shelter_image, None)
-                    if descriptors_shelter is not None and len(keypoints_shelter) >= 3:
-                        good_matches = find_good_matches(keypoints_uploaded, descriptors_uploaded, keypoints_shelter, descriptors_shelter, RATIO_THRESHOLD)
-                        if good_matches > max_good_matches and good_matches > MIN_MATCH_COUNT:
-                            max_good_matches = good_matches
-                            best_match_name = filename
+            if len(good_matches) > MIN_INLIERS:
+                src_pts = np.float32([kp1[m.queryIdx].pt for m in good_matches]).reshape(-1, 1, 2)
+                dst_pts = np.float32([kp2[m.trainIdx].pt for m in good_matches]).reshape(-1, 1, 2)
 
-        # Iterate through other images
-        for filename in os.listdir(IMAGE_FOLDER_OTHER):
-            if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-                image_path = os.path.join(IMAGE_FOLDER_OTHER, filename)
-                shelter_image = cv2.imread(image_path)
-                if shelter_image is not None:
-                    keypoints_shelter, descriptors_shelter = orb.detectAndCompute(shelter_image, None)
-                    if descriptors_shelter is not None and len(keypoints_shelter) >= 3:
-                        good_matches = find_good_matches(keypoints_uploaded, descriptors_uploaded, keypoints_shelter, descriptors_shelter, RATIO_THRESHOLD)
-                        if good_matches > max_good_matches and good_matches > MIN_MATCH_COUNT:
-                            max_good_matches = good_matches
-                            best_match_name = filename
+                M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+                if M is not None and mask is not None:
+                    inlier_matches = np.sum(mask)
+                    return inlier_matches, M
+            return 0, None
+
+        # Iterate through all pet images
+        for folder_name in [IMAGE_FOLDER_CATS, IMAGE_FOLDER_OTHER]:
+            for filename in os.listdir(folder_name):
+                if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    image_path = os.path.join(folder_name, filename)
+                    shelter_image = cv2.imread(image_path)
+                    if shelter_image is not None:
+                        keypoints_shelter, descriptors_shelter = orb.detectAndCompute(shelter_image, None)
+                        if descriptors_shelter is not None and len(keypoints_shelter) >= 10: # Increased min keypoints
+                            inlier_count, _ = find_good_matches_homography(
+                                keypoints_uploaded, descriptors_uploaded, keypoints_shelter, descriptors_shelter, RATIO_THRESHOLD
+                            )
+                            if inlier_count > max_inliers and inlier_count > MIN_INLIERS:
+                                max_inliers = inlier_count
+                                best_match_name = filename
 
     except Exception as e:
         print(f"Error in find_match function: {e}")
@@ -123,4 +116,3 @@ def find_match(uploaded_image):
         return best_match_name
     else:
         return None
-
