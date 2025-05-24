@@ -480,26 +480,59 @@ else:
     if 'found_pet_reported' not in st.session_state:
         st.session_state['found_pet_reported'] = False # Flag to track if points were awarded
 
+    if 'potential_match_name' not in st.session_state: # NEW: Store potential match name
+        st.session_state['potential_match_name'] = None
+    if 'awaiting_confirmation' not in st.session_state: # NEW: Flag for user confirmation
+        st.session_state['awaiting_confirmation'] = False
+
     if uploaded_file is not None:
         st.image(uploaded_file, caption="Found Pet", width=200)
-        match = find_match(uploaded_file)
-        if match:
-            st.success(f"Possible match: {match}")
-            st.write("Contact shelter to confirm.")
-            st.session_state['match_message_visible'] = True
-            st.balloons()
-        else:
-            st.info("No matches found. Check back later.")
-            st.session_state['match_message_visible'] = True
+        # Only run find_match if not already awaiting confirmation
+        if not st.session_state['awaiting_confirmation']:
+            with st.spinner("Searching for a match..."):
+                match_name = find_match(uploaded_file)
+            st.session_state['potential_match_name'] = match_name # Store the result
 
-        if st.button("Continue", key="continue_match"):
-            st.session_state['match_message_visible'] = False
-            if match and not st.session_state['found_pet_reported']: # Award points only if there was a match and not already awarded
-                report_found_pet_points() # Award points for found pet report - NEW
-                st.session_state['found_pet_reported'] = True # Set flag to prevent duplicate awarding
-            elif not match:
-                st.info("No points awarded as no match was found.")
-            st.rerun()
+        if st.session_state['potential_match_name']:
+            st.success(f"Possible match found: **{st.session_state['potential_match_name']}**")
+            st.write("Does this look like your pet? Please confirm to earn points!")
+            st.session_state['awaiting_confirmation'] = True # Set flag to await confirmation
+
+            col_yes, col_no = st.columns(2)
+            with col_yes:
+                if st.button("Yes, this is my pet!", key="confirm_match_yes"):
+                    # Check if points were already awarded for this specific confirmation
+                    if not st.session_state.get('last_confirmed_match', '') == st.session_state['potential_match_name']:
+                        report_found_pet_points() # Award points ONLY on explicit confirmation
+                        st.session_state['last_confirmed_match'] = st.session_state['potential_match_name'] # Store confirmed match to prevent re-awarding
+                        st.success(f"Confirmed! Thank you for helping. Points awarded.")
+                    else:
+                        st.info("Already confirmed this match and points awarded.")
+
+                    st.session_state['potential_match_name'] = None # Clear match
+                    st.session_state['awaiting_confirmation'] = False # Reset confirmation state
+                    st.rerun() # Rerun to clear messages
+            with col_no:
+                if st.button("No, this is not my pet.", key="confirm_match_no"):
+                    st.info("Thank you for clarifying. No points awarded for this match.")
+                    st.session_state['potential_match_name'] = None # Clear match
+                    st.session_state['awaiting_confirmation'] = False # Reset confirmation state
+                    st.rerun() # Rerun to clear messages
+
+        elif st.session_state['potential_match_name'] is None and not st.session_state['awaiting_confirmation']:
+            # This block runs if no match was found initially
+            st.info("No matches found. Check back later.")
+            # No points awarded here.
+            if st.button("Clear Search", key="clear_no_match"): # Button to clear the no match message
+                st.session_state['match_message_visible'] = False # This might be redundant, but safe to keep
+                st.session_state['potential_match_name'] = None
+                st.session_state['awaiting_confirmation'] = False
+                st.rerun()
+
+    # Any code that was AFTER the old 'if uploaded_file is not None' block should remain.
+    # This specifically means the 'if st.session_state['found_pet_reported']:' block
+    # should be removed, as the new logic handles point awarding and messages directly.
+    # The '--- Lost Pet Reporting Form ---' should follow after this new block.
 
     if st.session_state['found_pet_reported']:
         st.success(f"Found Pet Reported Successfully! +5 Points")

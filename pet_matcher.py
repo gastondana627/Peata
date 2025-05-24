@@ -49,8 +49,8 @@ def find_match(uploaded_image):
     """
     best_match_name = None
     max_inliers = 0
-    MIN_INLIERS = 15  # Increased minimum number of inlier matches required
-    RATIO_THRESHOLD = 0.7 # Strict ratio threshold
+    MIN_INLIERS = 20  # Increased minimum number of inlier matches required
+    RATIO_THRESHOLD = 0.65 # Strict ratio threshold
 
     # Initialize ORB detector and BFMatcher with crossCheck
     orb = cv2.ORB_create(nfeatures=2000) # Increase number of features
@@ -61,36 +61,51 @@ def find_match(uploaded_image):
         return None
 
     try:
+        # Important: Reset stream position to the beginning if it's already been read (e.g., by st.image)
+        uploaded_image.seek(0)
         file_bytes = np.asarray(bytearray(uploaded_image.read()), dtype=np.uint8)
         uploaded_image_cv = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
 
         if uploaded_image_cv is None:
-            print("Failed to decode uploaded image.")
-            return None
+            print("Failed to decode uploaded image using cv2.imdecode")
+            return None # Handle the case where image decoding fails
 
-        keypoints_uploaded, descriptors_uploaded = orb.detectAndCompute(uploaded_image_cv, None)
-        if descriptors_uploaded is None or len(keypoints_uploaded) < 3:
-            print("Not enough keypoints detected in the uploaded image.")
+        # Convert to grayscale for feature detection as ORB is often more stable with it
+        uploaded_image_gray = cv2.cvtColor(uploaded_image_cv, cv2.COLOR_BGR2GRAY)
+        keypoints_uploaded, descriptors_uploaded = orb.detectAndCompute(uploaded_image_gray, None)
+
+        if descriptors_uploaded is None or len(keypoints_uploaded) < MIN_INLIERS: # Use MIN_INLIERS as a baseline
+            print(f"Not enough keypoints detected in the uploaded image ({len(keypoints_uploaded)} < {MIN_INLIERS}).")
             return None
 
         def find_good_matches_homography(kp1, des1, kp2, des2, ratio_thresh):
-            if des1 is None or des2 is None or len(kp1) < 10 or len(kp2) < 10: # Increased min keypoints
-                return 0, None
-            matches = bf.knnMatch(des1, des2, k=2)
-            good_matches = []
-            for m, n in matches:
-                if m.distance < ratio_thresh * n.distance:
-                    good_matches.append(m)
+            if des1 is None or des2 is None or len(kp1) < 10 or len(kp2) < 10: # Minimum keypoints for homography
+                return 0, None, None # Return 0 inliers, None M, None mask
 
-            if len(good_matches) > MIN_INLIERS:
+            try:
+                matches = bf.knnMatch(des1, des2, k=2)
+            except cv2.error as e:
+                print(f"Error in knnMatch: {e}. Descriptors might be empty or invalid.")
+                return 0, None, None
+
+            good_matches = []
+            for pair in matches:
+                if len(pair) == 2: # Ensure knnMatch returned two nearest neighbors
+                    m, n = pair
+                    if m.distance < ratio_thresh * n.distance:
+                        good_matches.append(m)
+                elif len(pair) == 1: # Handle cases where only one match is found (e.g., crossCheck=True)
+                    good_matches.append(pair[0])
+
+            if len(good_matches) > MIN_INLIERS: # Ensure enough matches before homography
                 src_pts = np.float32([kp1[m.queryIdx].pt for m in good_matches]).reshape(-1, 1, 2)
                 dst_pts = np.float32([kp2[m.trainIdx].pt for m in good_matches]).reshape(-1, 1, 2)
 
-                M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+                M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0) # RANSAC threshold 5.0
                 if M is not None and mask is not None:
-                    inlier_matches = np.sum(mask)
-                    return inlier_matches, M
-            return 0, None
+                    inlier_matches = np.sum(mask) # Sum of the boolean mask gives count of inliers
+                    return inlier_matches, M, mask
+            return 0, None, None # Return 0 inliers if not enough good matches or homography fails
 
         # Iterate through all pet images
         for folder_name in [IMAGE_FOLDER_CATS, IMAGE_FOLDER_OTHER]:
@@ -99,12 +114,15 @@ def find_match(uploaded_image):
                     image_path = os.path.join(folder_name, filename)
                     shelter_image = cv2.imread(image_path)
                     if shelter_image is not None:
-                        keypoints_shelter, descriptors_shelter = orb.detectAndCompute(shelter_image, None)
-                        if descriptors_shelter is not None and len(keypoints_shelter) >= 10: # Increased min keypoints
-                            inlier_count, _ = find_good_matches_homography(
-                                keypoints_uploaded, descriptors_uploaded, keypoints_shelter, descriptors_shelter, RATIO_THRESHOLD
+                        shelter_image_gray = cv2.cvtColor(shelter_image, cv2.COLOR_BGR2GRAY)
+                        keypoints_shelter, descriptors_shelter = orb.detectAndCompute(shelter_image_gray, None)
+                        if descriptors_shelter is not None and len(keypoints_shelter) >= MIN_INLIERS: # Use MIN_INLIERS as a baseline
+                            inlier_count, _, _ = find_good_matches_homography(
+                                keypoints_uploaded, descriptors_uploaded,
+                                keypoints_shelter, descriptors_shelter,
+                                RATIO_THRESHOLD
                             )
-                            if inlier_count > max_inliers and inlier_count > MIN_INLIERS:
+                            if inlier_count > max_inliers and inlier_count >= MIN_INLIERS: # Must meet or exceed MIN_INLIERS
                                 max_inliers = inlier_count
                                 best_match_name = filename
 
@@ -113,6 +131,8 @@ def find_match(uploaded_image):
         return None
 
     if best_match_name:
-        return best_match_name
+        # Return only the name for now, additional info can be fetched if needed
+        # Strip extension for cleaner display
+        return os.path.splitext(best_match_name)[0]
     else:
         return None
