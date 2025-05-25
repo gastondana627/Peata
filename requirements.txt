@@ -23,6 +23,7 @@ grpc-google-iam-v1==0.14.0
 grpcio==1.71.0rc2
 grpcio-status==1.71.0rc2
 idna==3.10
+imagehash==4.3.1
 Jinja2==3.1.5
 jsonschema==4.23.0
 jsonschema-specifications==2024.10.1
