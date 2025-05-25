@@ -5,8 +5,38 @@ from google.oauth2 import service_account
 from google.cloud import aiplatform
 import toml
 
+from PIL import Image # For imagehash
+import imagehash     # For perceptual hashing
+import io            # For imagehash
+
 IMAGE_FOLDER_CATS = "img/cats"
 IMAGE_FOLDER_OTHER = "img/other"
+
+# Streamlit App - Display Cat Images
+def display_cat_gallery():
+    st.title("🐱 Cat Gallery")
+
+    if not os.path.exists(IMAGE_FOLDER_CATS):
+        st.warning("Cat image folder not found!")
+        return
+
+    cat_images = [f for f in os.listdir(IMAGE_FOLDER_CATS) if f.endswith(".jpg")]
+    cat_images.sort()
+
+    if not cat_images:
+        st.info("No cat images found.")
+    else:
+        for img_name in cat_images:
+            img_path = os.path.join(IMAGE_FOLDER_CATS, img_name)
+            try:
+                image = Image.open(img_path)
+                st.image(image, caption=img_name, use_column_width=True)
+            except Exception as e:
+                st.warning(f"Could not open {img_name}: {e}")
+
+# Run the gallery if you're not modularizing the script
+if __name__ == "__main__":
+    display_cat_gallery()
 
 def load_gcp_credentials():
     """Loads GCP credentials from the service account JSON."""
@@ -43,104 +73,188 @@ else:
     print("GCP or toml credentials failed to load")
 
 def find_match(uploaded_image):
-    """
-    Finds the best match for the uploaded image among shelter pet images
-    using ORB feature matching with adjusted parameters for better recall.
-    """
-    best_match_name = None
-    max_inliers = 0
-    # Adjusted parameters for better recall (finding more matches)
-    MIN_INLIERS = 18  # Slightly reduced from 20 (original 15). Try 15 if still too strict.
-    RATIO_THRESHOLD = 0.70 # Slightly increased from 0.65 (original 0.75). Try 0.75 if needed.
+    import imagehash
+    from PIL import Image
+    import os
 
-    # Initialize ORB detector and BFMatcher with crossCheck
-    orb = cv2.ORB_create(nfeatures=2500) # Keep high number of features
-    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+    print("Stage 1 - Hashing uploaded image")
+    uploaded_hash = imagehash.phash(Image.open(uploaded_image))
 
-    if uploaded_image is None:
-        print("No image uploaded. Returning None.")
+    print("Stage 2 - Searching folders...")
+    best_match = None
+    lowest_distance = float("inf")
+
+    for folder_name in os.listdir("img"):
+        folder_path = os.path.join("img", folder_name)
+
+        # Skip non-directory entries
+        if not os.path.isdir(folder_path):
+            continue
+
+        for filename in os.listdir(folder_path):
+            if not filename.lower().endswith((".jpg", ".jpeg", ".png")):
+                continue  # Skip non-image files
+
+            image_path = os.path.join(folder_path, filename)
+            try:
+                candidate_image = Image.open(image_path)
+                candidate_hash = imagehash.phash(candidate_image)
+
+                distance = abs(uploaded_hash - candidate_hash)
+                print(f"Comparing to {image_path} — Distance: {distance}")
+
+                if distance < lowest_distance:
+                    lowest_distance = distance
+                    best_match = image_path
+
+            except Exception as e:
+                print(f"Error reading image at {image_path}: {e}")
+                continue
+
+    if best_match:
+        print(f"Best match: {best_match} (distance: {lowest_distance})")
+        return best_match
+    else:
+        print("No match found.")
         return None
 
     try:
-        # Important: Reset stream position to the beginning if it's already been read (e.g., by st.image)
-        uploaded_image.seek(0)
-        file_bytes = np.asarray(bytearray(uploaded_image.read()), dtype=np.uint8)
-        uploaded_image_cv = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+        # --- Prepare uploaded image for both pHash and ORB ---
+        uploaded_image.seek(0) # Reset stream position for reading
+        pil_image = Image.open(io.BytesIO(uploaded_image.read()))
+        uploaded_image_cv = cv2.imdecode(np.asarray(bytearray(pil_image.tobytes()), dtype=np.uint8), cv2.IMREAD_COLOR) # Convert PIL to OpenCV
 
         if uploaded_image_cv is None:
-            print("Failed to decode uploaded image using cv2.imdecode")
+            print("Failed to decode uploaded image for OpenCV.")
             return None
 
-        # Convert to grayscale for feature detection as ORB is often more stable with it
-        uploaded_image_gray = cv2.cvtColor(uploaded_image_cv, cv2.COLOR_BGR2GRAY)
-        keypoints_uploaded, descriptors_uploaded = orb.detectAndCompute(uploaded_image_gray, None)
+        # --- Stage 1: Perceptual Hashing ---
+        print("Stage 1: Performing Perceptual Hashing...")
+        uploaded_hash = imagehash.phash(pil_image)
 
-        # Check if enough keypoints are detected in the uploaded image
-        # Using a slightly lower threshold for this initial check compared to MIN_INLIERS
-        if descriptors_uploaded is None or len(keypoints_uploaded) < 10:
-            print(f"Not enough keypoints detected in the uploaded image ({len(keypoints_uploaded)}).")
-            return None
-
-        def find_good_matches_homography(kp1, des1, kp2, des2, ratio_thresh):
-            # Ensure enough keypoints for homography calculation before matching
-            if des1 is None or des2 is None or len(kp1) < 10 or len(kp2) < 10:
-                return 0, None, None
-
-            try:
-                # Perform k-NN matching
-                matches = bf.knnMatch(des1, des2, k=2)
-            except cv2.error as e:
-                print(f"Error in knnMatch: {e}. Descriptors might be empty or invalid for matching.")
-                return 0, None, None
-
-            good_matches = []
-            for pair in matches:
-                # Ensure knnMatch returned two nearest neighbors for ratio test, or one for crossCheck=True
-                if len(pair) == 2:
-                    m, n = pair
-                    if m.distance < ratio_thresh * n.distance:
-                        good_matches.append(m)
-                elif len(pair) == 1: # This case is typically for bf.match with crossCheck=True
-                    good_matches.append(pair[0])
-
-            # Only proceed with homography if enough good matches are found
-            if len(good_matches) >= MIN_INLIERS: # Use main MIN_INLIERS as the bar here
-                src_pts = np.float32([kp1[m.queryIdx].pt for m in good_matches]).reshape(-1, 1, 2)
-                dst_pts = np.float32([kp2[m.trainIdx].pt for m in good_matches]).reshape(-1, 1, 2)
-
-                M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0) # RANSAC threshold 5.0
-                if M is not None and mask is not None:
-                    inlier_matches = np.sum(mask) # Sum of the boolean mask gives count of inliers
-                    return inlier_matches, M, mask
-            return 0, None, None # Return 0 inliers if not enough good matches or homography fails
-
-        # Iterate through all pet images in both folders
         for folder_name in [IMAGE_FOLDER_CATS, IMAGE_FOLDER_OTHER]:
             for filename in os.listdir(folder_name):
                 if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
                     image_path = os.path.join(folder_name, filename)
-                    shelter_image = cv2.imread(image_path)
-                    if shelter_image is not None:
-                        shelter_image_gray = cv2.cvtColor(shelter_image, cv2.COLOR_BGR2GRAY)
-                        keypoints_shelter, descriptors_shelter = orb.detectAndCompute(shelter_image_gray, None)
-                        # Check if enough keypoints are detected in the shelter image
-                        if descriptors_shelter is not None and len(keypoints_shelter) >= 10:
-                            inlier_count, _, _ = find_good_matches_homography(
-                                keypoints_uploaded, descriptors_uploaded,
-                                keypoints_shelter, descriptors_shelter,
-                                RATIO_THRESHOLD
-                            )
-                            # Update best match if current image has more inliers AND meets the MIN_INLIERS threshold
-                            if inlier_count > max_inliers and inlier_count >= MIN_INLIERS:
-                                max_inliers = inlier_count
-                                best_match_name = filename
+                    try:
+                        shelter_pil_image = Image.open(image_path)
+                        shelter_hash = imagehash.phash(shelter_pil_image)
+                        
+                        hamming_distance = uploaded_hash - shelter_hash
+                        if hamming_distance < best_match_score:
+                            best_match_score = hamming_distance
+                            best_match_name = filename # Tentative best match from pHash
+
+                    except Exception as e:
+                        print(f"Error processing {filename} for pHash: {e}")
+                        continue
+        
+        if best_match_name and best_match_score <= PHASH_THRESHOLD:
+            print(f"Stage 1 Success: Found strong pHash match: {best_match_name} (Distance: {best_match_score})")
+            return os.path.splitext(best_match_name)[0]
+        else:
+            print(f"Stage 1: No strong pHash match found (Best Distance: {best_match_score}). Proceeding to Stage 2.")
+
+
+        # --- Stage 2: ORB + Homography (Only if pHash doesn't find a strong match) ---
+        print("Stage 2: Performing ORB + Homography matching...")
+
+        # Convert uploaded image to grayscale for ORB
+        uploaded_image_gray = cv2.cvtColor(uploaded_image_cv, cv2.COLOR_BGR2GRAY)
+        keypoints_uploaded, descriptors_uploaded = orb.detectAndCompute(uploaded_image_gray, None)
+
+        if descriptors_uploaded is None or len(keypoints_uploaded) < MIN_INLIERS_FINAL_ORB:
+            print(f"Uploaded image has too few keypoints ({len(keypoints_uploaded)}) for ORB.")
+            return None # No match if not enough keypoints for ORB
+
+        def perform_homography_match(kp1, des1, kp2, des2, ratio_thresh, min_inliers_count):
+            if des1 is None or des2 is None or len(kp1) < 10 or len(kp2) < 10:
+                return 0, float('inf') # Return 0 inliers, infinite error
+
+            try:
+                matches = bf.knnMatch(des1, des2, k=2)
+            except cv2.error as e:
+                # print(f"Error in knnMatch (ORB): {e}") # Suppress verbose error for expected cases
+                return 0, float('inf')
+
+            good_matches = []
+            for pair in matches:
+                if len(pair) == 2:
+                    m, n = pair
+                    if m.distance < ratio_thresh * n.distance:
+                        good_matches.append(m)
+                elif len(pair) == 1:
+                    good_matches.append(pair[0])
+
+            if len(good_matches) < min_inliers_count:
+                return 0, float('inf')
+
+            src_pts = np.float32([kp1[m.queryIdx].pt for m in good_matches]).reshape(-1, 1, 2)
+            dst_pts = np.float32([kp2[m.trainIdx].pt for m in good_matches]).reshape(-1, 1, 2)
+
+            M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+            if M is None or mask is None:
+                return 0, float('inf')
+
+            inlier_matches = np.sum(mask)
+
+            if inlier_matches > 0:
+                inlier_src_pts = src_pts[mask.ravel() == 1]
+                inlier_dst_pts = dst_pts[mask.ravel() == 1]
+                reprojected_pts = cv2.perspectiveTransform(inlier_src_pts, M)
+                errors = np.linalg.norm(inlier_dst_pts - reprojected_pts, axis=2)
+                avg_error = np.mean(errors)
+            else:
+                avg_error = float('inf')
+
+            return inlier_matches, avg_error
+
+
+        # Iterate through all pet images in both folders for ORB matching
+        orb_best_match_name = None
+        orb_max_inliers = 0
+        orb_min_avg_reprojection_error = float('inf')
+
+        for folder_name in [IMAGE_FOLDER_CATS, IMAGE_FOLDER_OTHER]:
+            for filename in os.listdir(folder_name):
+                if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    image_path = os.path.join(folder_name, filename)
+                    shelter_image_cv = cv2.imread(image_path)
+                    if shelter_image_cv is None:
+                        continue
+
+                    shelter_image_gray = cv2.cvtColor(shelter_image_cv, cv2.COLOR_BGR2GRAY)
+                    keypoints_shelter, descriptors_shelter = orb.detectAndCompute(shelter_image_gray, None)
+
+                    if descriptors_shelter is None or len(keypoints_shelter) < MIN_INLIERS_FINAL_ORB:
+                        continue # Skip if shelter image has too few keypoints for ORB
+
+                    inlier_count, avg_error = perform_homography_match(
+                        keypoints_uploaded, descriptors_uploaded,
+                        keypoints_shelter, descriptors_shelter,
+                        RATIO_THRESHOLD_ORB, MIN_INLIERS_FINAL_ORB
+                    )
+
+                    # Update best ORB match based on inliers and reprojection error
+                    # Prioritize more inliers, then lower error
+                    if inlier_count > orb_max_inliers:
+                        orb_max_inliers = inlier_count
+                        orb_min_avg_reprojection_error = avg_error
+                        orb_best_match_name = filename
+                    elif inlier_count == orb_max_inliers and avg_error < orb_min_avg_reprojection_error:
+                        orb_min_avg_reprojection_error = avg_error
+                        orb_best_match_name = filename
+
+        # Final decision for Stage 2
+        if orb_best_match_name and orb_max_inliers >= MIN_INLIERS_FINAL_ORB \
+           and orb_min_avg_reprojection_error <= MAX_AVG_REPROJECTION_ERROR_ORB:
+            print(f"Stage 2 Success: Found ORB match: {orb_best_match_name} (Inliers: {orb_max_inliers}, Error: {orb_min_avg_reprojection_error:.2f})")
+            return os.path.splitext(orb_best_match_name)[0]
+        else:
+            print("Stage 2: No robust ORB match found.")
+            return None
+
 
     except Exception as e:
-        print(f"Error in find_match function: {e}")
-        return None
-
-    if best_match_name:
-        # Return only the name without extension for cleaner display
-        return os.path.splitext(best_match_name)[0]
-    else:
+        print(f"Critical error in find_match function: {e}")
         return None
