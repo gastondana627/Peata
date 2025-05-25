@@ -6,4 +6,4 @@ textColor = "#FFFFFF" # White
 font = "sans serif" # Streamlit does not directly support Architype Annette
 
 [app]
-file = "streamlit_app.py"
+file = "app.py"
