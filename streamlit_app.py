@@ -25,7 +25,8 @@ import streamlit.components.v1 as components
 import requests # Ensure requests is imported if used for forms
 
 # Local imports
-# from pet_matcher import find_match # Ensure this path is correct - Temporarily comment out if pet_matcher isn't fully set up for testing
+# IMPORTANT: Use the new pet_matcher.py
+from pet_matcher import find_match, precompute_shelter_image_features, IMAGE_FOLDER_CATS, IMAGE_FOLDER_OTHER
 # from datetime import datetime # Already imported above (standard library import)
 
 # --- Check if cv2 (OpenCV) is importable --- # NEW
@@ -36,22 +37,41 @@ except ImportError as e:
     print(f"Error importing cv2 within app.py: {e}")  # Error message if import fails
 
 from google.oauth2 import service_account
+from google.cloud import aiplatform # Import aiplatform here
 
 try:
     creds_dict = st.secrets["vertex_ai"]
     credentials_gcp = service_account.Credentials.from_service_account_info(creds_dict)
     print("✅ GCP credentials loaded successfully.")
-    # st.success("✅ GCP credentials loaded successfully.") # Don't use st.success here, it will show on every rerun
+
+    # Initialize Vertex AI here, once per session if possible, or use @st.cache_resource
+    project_id = creds_dict['project_id']
+    # Ensure 'location' is in your secrets.toml or define a default
+    location = creds_dict.get('location', "us-central1") # Get location from secrets or default
+
+    @st.cache_resource
+    def initialize_vertex_ai_cached(_creds, proj_id, loc): # Added underscore to _creds
+        aiplatform.init(project=proj_id, location=loc, credentials=_creds)
+        print("Vertex AI Initialized (cached)")
+        return True # Return a success indicator
+
+    if initialize_vertex_ai_cached(credentials_gcp, project_id, location):
+        st.sidebar.success("✅ GCP/Vertex AI initialized.") # Use sidebar for less intrusive messages
+    else:
+        st.sidebar.error("❌ GCP/Vertex AI failed to initialize.")
+
 except Exception as e:
-    print(f"❌ Failed to load GCP credentials: {e}")
-    st.error(f"❌ Failed to load GCP credentials: {e}")
+    print(f"❌ Failed to load GCP credentials or initialize Vertex AI: {e}")
+    st.error(f"❌ Failed to load GCP credentials or initialize Vertex AI: {e}")
 
 import urllib.parse  # Add this line here
 
 # --- IMAGE FOLDERS ---
-IMAGE_FOLDER_CATS = "img/cats"
-IMAGE_FOLDER_OTHER = "img/other"
+# These are now imported from pet_matcher, but you can define them here too if you prefer
+# IMAGE_FOLDER_CATS = "img/cats"
+# IMAGE_FOLDER_OTHER = "img/other"
 ADOPTION_WEBSITE = "https://www.sa.gov/Directory/Departments/ACS/Adopt/Pet-Search"
+
 
 # --- LOAD DATA (for lost_pets database.json) ---
 def load_data():
@@ -60,7 +80,18 @@ def load_data():
             data = json.load(f)
         return data
     except FileNotFoundError:
-        return {"lost_pets": []} # Return a default structure if file not found
+        # Create an empty database.json if it doesn't exist
+        initial_data = {"lost_pets": []}
+        with open("database.json", "w") as f:
+            json.dump(initial_data, f, indent=4)
+        return initial_data
+    except json.JSONDecodeError:
+        print("Warning: database.json is empty or malformed. Resetting.")
+        initial_data = {"lost_pets": []}
+        with open("database.json", "w") as f:
+            json.dump(initial_data, f, indent=4)
+        return initial_data
+
 
 def save_data(data):
     with open("database.json", "w") as f:
@@ -79,11 +110,17 @@ def load_credentials():
         leaderboard = data.get('leaderboard', {}) # Get leaderboard, or an empty dict if not present
         return credentials, leaderboard
     except FileNotFoundError:
-        # If credentials.json doesn't exist, return empty dicts for both
+        # If credentials.json doesn't exist, create an empty one and return empty dicts
+        initial_creds = {"leaderboard": {}}
+        with open("credentials.json", "w") as f:
+            json.dump(initial_creds, f, indent=4)
         return {}, {}
     except json.JSONDecodeError:
         # Handle case where file exists but is empty or malformed JSON
         print("Warning: credentials.json found but is empty or malformed. Starting fresh.")
+        initial_creds = {"leaderboard": {}}
+        with open("credentials.json", "w") as f:
+            json.dump(initial_creds, f, indent=4)
         return {}, {}
 
 # --- SAVE CREDENTIALS (writes to credentials.json) ---
@@ -260,6 +297,18 @@ animals = [
     {"name": "Ginger", "breed": "Domestic Shorthair", "age": "3", "image": "Ginger.jpg"},
     {"name": "Blaine", "breed": "Domestic Shorthair", "age": 1, "image": "Blaine.jpg"}
 ]
+
+# --- Precompute shelter animal features once at startup ---
+# This dictionary will hold the pHashes and ORB features of all known animals.
+@st.cache_resource
+def get_shelter_features_db():
+    print("Precomputing shelter animal features for the first time...")
+    # Pass the actual image folders to the precomputation function
+    # You can add more folders if you have them, e.g., [IMAGE_FOLDER_CATS, IMAGE_FOLDER_OTHER, "img/dogs"]
+    return precompute_shelter_image_features([IMAGE_FOLDER_CATS, IMAGE_FOLDER_OTHER])
+
+SHELTER_FEATURES_DB = get_shelter_features_db()
+
 
 # --- Pagination ---
 ANIMALS_PER_PAGE = 20
@@ -483,28 +532,6 @@ def display_user_history():
     else:
         st.sidebar.info("Please log in to see your history.")
 
-# --- Placeholder for find_match function ---
-# This function would typically interact with your pet_matcher.py.
-# If `pet_matcher.py` exists and is set up, keep `from pet_matcher import find_match`.
-# Otherwise, this placeholder will prevent errors.
-def find_match(uploaded_file):
-    # In a real scenario, this would process the image and find a match.
-    # For now, it's a dummy function that simulates a match based on file name or randomness.
-    if uploaded_file:
-        # Simulate some logic based on file name or a simple random choice
-        file_name_lower = uploaded_file.name.lower()
-        if "cat" in file_name_lower or "kitty" in file_name_lower:
-            return "Simulated Cat Match"
-        elif "dog" in file_name_lower or "puppy" in file_name_lower:
-            return "Simulated Dog Match"
-        else:
-            # Simple simulation for other cases
-            import random
-            if random.random() > 0.5:
-                return "Simulated Generic Match"
-            else:
-                return None # Simulate no match sometimes
-    return None
 
 # --- Main Application Flow Control ---
 if st.session_state.view == "login":
@@ -551,7 +578,10 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
 
     if uploaded_found_pet_file is not None:
         # Generate a hash for the uploaded file content to check for changes
-        file_hash = hashlib.sha256(uploaded_found_pet_file.getvalue()).hexdigest()
+        # Read the file content for hashing, then seek back to 0
+        file_content = uploaded_found_pet_file.getvalue()
+        file_hash = hashlib.sha256(file_content).hexdigest()
+        uploaded_found_pet_file.seek(0) # IMPORTANT: Reset stream position after reading for hashing
 
         if file_hash != st.session_state['last_uploaded_file_hash']:
             # New file uploaded or file changed, reset flags and process
@@ -570,9 +600,10 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
         st.write("Upload timestamp:", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
         # Only run find_match if not already awaiting confirmation and no potential match yet
+        # Pass the precomputed SHELTER_FEATURES_DB to find_match
         if not st.session_state['awaiting_confirmation'] and st.session_state['potential_match_name'] is None:
             with st.spinner("Searching for a match..."):
-                match_name = find_match(uploaded_found_pet_file) # Use the uploaded_found_pet_file
+                match_name = find_match(uploaded_found_pet_file, SHELTER_FEATURES_DB)
                 st.session_state['potential_match_name'] = match_name
                 if match_name:
                     st.session_state['awaiting_confirmation'] = True
@@ -602,6 +633,7 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
                 st.session_state['potential_match_name'] = None # Clear match
                 st.session_state['awaiting_confirmation'] = False # Reset confirmation state
                 st.session_state['last_uploaded_file_hash'] = None # Allow re-uploading new image
+                uploaded_found_pet_file = None # Clear the file uploader state (visual)
                 st.rerun() # Rerun to clear messages and potential match UI
         with col_no:
             if st.button("No, this is not my pet.", key="confirm_match_no"):
@@ -609,6 +641,7 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
                 st.session_state['potential_match_name'] = None # Clear match
                 st.session_state['awaiting_confirmation'] = False # Reset confirmation state
                 st.session_state['last_uploaded_file_hash'] = None # Allow re-uploading new image
+                uploaded_found_pet_file = None # Clear the file uploader state (visual)
                 st.rerun() # Rerun to clear messages and potential match UI
 
     # --- Lost Pet Reporting Form ---
