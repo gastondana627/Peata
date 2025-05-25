@@ -1,22 +1,30 @@
 # streamlit_app.py
+
 import sys
-
-print(f"Python Executable used by Streamlit: {sys.executable}") # VERIFY PYTHON PATH - KEEP THIS
-
-import streamlit as st
-import os
-from pet_matcher import find_match # Ensure this import path is correct
-import json
-import streamlit.components.v1 as components
-import hashlib
-import datetime # Import datetime module
-import pandas as pd # Import pandas for dataframe
-import importlib # For programmatic import check - NEW
-import toml # Added for secrets.toml
+print(f"Python Executable used by Streamlit: {sys.executable}")  # VERIFY PYTHON PATH - KEEP THIS
 
 import streamlit as st
+st.set_page_config(page_title="Animal Shelter", layout="wide")  # MUST come right after importing streamlit
+
+# Diagnostics
 print("Contents of st.secrets:")
 print(st.secrets)
+
+# Standard library
+import os
+import json
+import hashlib
+import datetime
+import importlib
+import sys
+
+# Third-party libraries
+import pandas as pd
+import toml
+import streamlit.components.v1 as components
+
+# Local imports
+from pet_matcher import find_match  # Ensure this path is correct
 
 # --- Check if cv2 (OpenCV) is importable --- # NEW
 try:
@@ -243,7 +251,6 @@ ANIMALS_PER_PAGE = 20
 NUM_PAGES = (len(animals) + ANIMALS_PER_PAGE - 1) // ANIMALS_PER_PAGE
 
 # Streamlit setup
-st.set_page_config(page_title="Animal Shelter", layout="wide")
 st.markdown(
     """
     <style>
