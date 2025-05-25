@@ -25,6 +25,17 @@ try:
 except ImportError as e:
     print(f"Error importing cv2 within app.py: {e}") # Error message if import fails
 
+from google.oauth2 import service_account
+
+try:
+    creds_dict = st.secrets["vertex_ai"]
+    credentials = service_account.Credentials.from_service_account_info(creds_dict)
+    print("✅ GCP credentials loaded successfully.")
+    st.success("✅ GCP credentials loaded successfully.")
+except Exception as e:
+    print(f"❌ Failed to load GCP credentials: {e}")
+    st.error(f"❌ Failed to load GCP credentials: {e}")
+
 import urllib.parse # Add this line here
 
 # --- IMAGE FOLDERS ---
