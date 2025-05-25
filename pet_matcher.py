@@ -12,6 +12,18 @@ import io            # For imagehash
 IMAGE_FOLDER_CATS = "img/cats"
 IMAGE_FOLDER_OTHER = "img/other"
 
+# Helper: Safe image loader
+def load_images_from_folder(folder_path):
+    try:
+        return [
+            os.path.join(folder_path, img)
+            for img in os.listdir(folder_path)
+            if img.lower().endswith((".png", ".jpg", ".jpeg"))
+        ]
+    except FileNotFoundError:
+        st.warning(f"Directory not found: {folder_path}")
+        return []
+
 # Streamlit App - Display Cat Images
 def display_cat_gallery():
     st.title("🐱 Cat Gallery")
