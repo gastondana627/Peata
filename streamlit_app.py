@@ -793,6 +793,37 @@ elif st.session_state.view == "signup":
     create_account()
 elif st.session_state.view == "main_app" and st.session_state['username']:
     # --- Main App Content (after successful login) ---
+    # vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+    # START OF STICKY LOGO DISPLAY BLOCK (This is where you ADD the code)
+    # vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+    logo_path = "assets/Peata_Logo.svg"  # <<<< CHANGE "your_logo.svg" TO YOUR ACTUAL FILENAME
+    logo_base64 = get_media_as_base64(logo_path) # Use your existing function
+
+    if logo_base64:
+        mime_type = "image/svg+xml"  # Specific for SVG files
+
+        sticky_logo_html = f"""
+            <style>
+                .sticky-logo-container {{
+                    position: fixed;
+                    top: 50px;       /* Adjust as needed */
+                    left: 1px;      /* Adjust as needed */
+                    z-index: 9999;
+                }}
+                .sticky-logo-container img {{
+                    width: 80px;      /* Adjust logo size */
+                    height: auto;
+                }}
+            </style>
+            <div class="sticky-logo-container">
+                <img src="data:{mime_type};base64,{logo_base64}" alt="Company Logo">
+            </div>
+        """
+        st.markdown(sticky_logo_html, unsafe_allow_html=True)
+    # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    # END OF STICKY LOGO DISPLAY BLOCK
+    # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
     st.title("Welcome to the Local Animal Shelter!")
     st.write("Here you can meet some of the animals available for adoption.")
     st.header(f"Welcome, {st.session_state['username']}! 🐾")
