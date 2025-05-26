@@ -451,7 +451,7 @@ if "view" not in st.session_state:
 
 def switch_view(new_view):
     st.session_state.view = new_view
-    st.rerun()
+    ##st.rerun()
 
 ## Def Login Function
 def login():
@@ -463,11 +463,12 @@ def login():
 
     if media_base64:
         if animation_path.lower().endswith((".mp4", ".webm")):
-            desired_max_width = "450px"
+            desired_max_width = "600px"
             
             video_html = f"""
             <div style="display: flex; justify-content: center; margin-bottom: 25px; margin-top: 15px;">
-                <video autoplay loop muted controls playsinline width="800" style="border-radius: 10px;">
+                <video autoplay loop muted controls playsinline
+                       style="width: 100%; max-width: {desired_max_width}; height: auto; border-radius: 10px;">
                     <source src="data:video/mp4;base64,{media_base64}" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
@@ -539,16 +540,12 @@ def create_account():
 
     if media_base64:
         if animation_path.lower().endswith((".mp4", ".webm")):
-            # 1. Define your desired maximum width for the video.
-            #    If you liked 800px as a maximum, set it here. Otherwise, adjust.
-            #    Let's use 600px as an example maximum that's large but still manageable.
-            #    You can change "600px" to "800px" if you prefer that as the max.
-            desired_max_width = "600px"
+            # Use the same desired_max_width as your login page for consistency
+            desired_max_width = "600px"  # Make this the same as in login() (e.g., "600px", "450px")
 
-            # 2. Updated video_html with responsive CSS styling
+            # This f-string should now be clean of invalid comments and use responsive styling
             video_html = f"""
             <div style="display: flex; justify-content: center; margin-bottom: 25px; margin-top: 15px;">
-            
                 <video autoplay loop muted controls playsinline
                        style="width: 100%; max-width: {desired_max_width}; height: auto; border-radius: 10px;">
                     <source src="data:video/mp4;base64,{media_base64}" type="video/mp4">
@@ -556,6 +553,7 @@ def create_account():
                 </video>
             </div>
             """
+            
         elif animation_path.lower().endswith(".gif"):
             # Current GIF part with fixed width.
             # To make GIF responsive, apply similar style changes as the video:
@@ -640,7 +638,7 @@ def create_account():
             save_credentials(credentials, leaderboard) # Ensure save_credentials is defined
             st.success("Account created successfully! Please log in.")
             st.session_state.view = "login"
-            st.rerun()
+            ##st.rerun()
     st.button("Back to Login", on_click=lambda: switch_view("login"), key="back_to_login_button") # Ensure switch_view is defined
 
 
@@ -806,7 +804,7 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
             <style>
                 .sticky-logo-container {{
                     position: fixed;
-                    top: 50px;       /* Adjust as needed */
+                    top: 55px;       /* Adjust as needed */
                     left: 1px;      /* Adjust as needed */
                     z-index: 9999;
                 }}
