@@ -6,6 +6,102 @@ print(f"Python Executable used by Streamlit: {sys.executable}")
 
 st.set_page_config(page_title="Animal Shelter", layout="wide")  # MUST come right after importing streamlit
 
+st.markdown(
+    """
+    <style>
+    /* Main background color for the entire app (excluding sidebar, which is Streamlit's theme) */
+    /* You may need to inspect your browser to find the correct data-testid or class for the main content wrapper. */
+    /* Common selectors include: [data-testid="stAppViewContainer"], [data-testid="stApp"] > div > section.main */
+    /* Or the auto-generated classes like 'st-emotion-cache-z5fcl4', 'st-emotion-cache-czk54k' etc. */
+    /* Try with a broad selector first, then refine if it's too aggressive. */
+    .stApp {
+        background-color: #1A1A1A; /* A dark grey/almost black for the main background */
+    }
+
+    /* Target the main content wrapper explicitly if the .stApp isn't enough */
+    /* IMPORTANT: You might need to change these class names based on your browser's inspector! */
+    div.st-emotion-cache-z5fcl4,
+    div.st-emotion-cache-czk54k,
+    div[data-testid="stVerticalBlock"] > div.st-emotion-cache-z5fcl4 { /* Common inner container for content */
+        background-color: #1A1A1A !important; /* Keep consistent dark background for main content blocks */
+    }
+
+    /* Styling for all text input fields, password fields, and text areas */
+    input[type="text"],
+    input[type="password"],
+    textarea {
+        background-color: #ffe0f0 !important; /* Light pink background */
+        color: black !important; /* Text color inside input fields */
+        border: 1px solid #ff99cc !important; /* Optional: pink border */
+        border-radius: 5px !important; /* Optional: rounded corners */
+        padding: 10px !important; /* Optional: padding inside the input */
+    }
+    /* Styling for input fields when they are focused (clicked/typed into) */
+    input[type="text"]:focus,
+    input[type="password"]:focus,
+    textarea:focus {
+        border-color: #ff007f !important; /* Darker pink border on focus */
+        box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.25) !important; /* Optional: pink glow on focus */
+    }
+
+    /* Styling for the file uploader dropzone background */
+    div[data-testid="stFileUploadDropzone"] {
+        background-color: #ffe0f0 !important; /* Light pink for the dropzone */
+        border: 1px solid #ff99cc !important; /* Match border style */
+        border-radius: 5px !important; /* Match border-radius */
+    }
+
+    /* Styling for the 'Browse files' button itself within the file uploader */
+    div[data-testid="stFileUploadDropzone"] button {
+        background-color: #ff69b4 !important; /* Hot pink for the button */
+        color: white !important;
+        border: none !important;
+    }
+
+    /* --- Custom Text Classes (for pet names and details in adoption section) --- */
+    .pet-name {
+        color: #FF69B4 !important; /* Hot pink for pet names */
+        font-weight: bold; /* Keep bold style */
+    }
+    .pet-detail {
+        color: #FFC0CB !important; /* Light pink for breed, age etc. */
+    }
+
+    /* --- Global Text Colors (to ensure all text is visible against dark background) --- */
+    /* This targets various text elements in Streamlit, apply carefully. */
+    h1, h2, h3, h4, h5, h6,
+    div[data-testid="stText"],
+    div[data-testid="stMarkdown"] p,
+    div[data-testid="stMarkdown"] li,
+    div[data-testid="stMarkdown"] ul,
+    div[data-testid="stMarkdown"] ol,
+    div[data-testid="stExpanderTitle"], /* For expander titles if used */
+    div[data-testid="stLinkButton"], /* For link buttons if used */
+    div[data-testid="stAlert"] > div, /* For alert box text */
+    div[data-testid="stToast"] > div, /* For toast message text */
+    .st-emotion-cache-k3g096.e1f1d6z61 { /* General text, might need inspection for accuracy */
+        color: #FFC0CB !important; /* Light pink for general text */
+    }
+
+    /* Specific adjustment for labels of input widgets */
+    label.st-b6 { /* Label for text_input, selectbox, etc. */
+        color: #FFC0CB !important; /* Ensure labels are light pink */
+    }
+    /* Specific adjustment for options in selectbox/radio buttons */
+    .st-emotion-cache-1g8wz9e, /* for selected option */
+    .st-emotion-cache-1g8wz9e > div, /* for dropdown options */
+    .st-emotion-cache-1v4a6f7, /* for radio buttons */
+    .st-emotion-cache-1v4a6f7 > div {
+        color: #FFC0CB !important;
+    }
+
+
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+
 # Diagnostics
 print("Contents of st.secrets:")
 print(st.secrets)
@@ -348,6 +444,27 @@ def switch_view(new_view):
 
 # --- Login Function ---
 def login():
+    st.markdown(
+        """
+        <style>
+        input[type="text"],
+        input[type="password"] {
+            background-color: #ffe0f0 !important; /* Light pink */
+            color: black !important;
+            border: 1px solid #ff99cc !important;
+            border-radius: 5px !important;
+            padding: 10px !important;
+        }
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            border-color: #ff007f !important;
+            box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.25) !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     st.title("Welcome to the Local Animal Shelter!")
     st.write("Please sign in or create an account.")
     username = st.text_input("Username:", key="login_username_input")
@@ -366,6 +483,30 @@ def login():
 
 # --- Create Account Function ---
 def create_account():
+
+    st.markdown(
+        """
+        <style>
+        input[type="text"],
+        input[type="password"],
+        textarea { /* Include textarea if you have text_area in signup */
+            background-color: #ffe0f0 !important; /* Light pink */
+            color: black !important;
+            border: 1px solid #ff99cc !important;
+            border-radius: 5px !important;
+            padding: 10px !important;
+        }
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        textarea:focus {
+            border-color: #ff007f !important;
+            box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.25) !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     st.title("Create Your Account")
     new_username = st.text_input("New Username:", key="signup_username_input")
     new_password = st.text_input("New Password:", type="password", key="signup_password_input")
@@ -467,6 +608,16 @@ def report_lost_pet_points(pet_name, pet_breed):
 
 # --- Report Found Pet Function (Points Added) ---
 def report_found_pet_points():
+    st.header("Lost Pet Reunification Hub")
+    st.markdown(
+        """
+        This hub helps reunite lost pets with their owners.
+        **Report a found pet:** Upload a photo. AI matching will attempt to find the owner. Earn points for reporting!
+        **Report a lost pet:** Fill the form below with pet info and photo. Earn points for reporting! We'll notify you of matches.
+        """
+    )
+
+
     st.info(f"You reported a found pet! +5 Points")
     username = st.session_state['username']
     if username:
@@ -690,9 +841,11 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
     for pet in paged_animals:
         try:
             with cols[pet_index % num_cols]:
-                st.write(f"**{pet['name']}**")
-                st.write(f"Breed: {pet['breed']}")
-                st.write(f"Age: {pet['age']}")
+                st.markdown(f"<p class='pet-name'>{pet['name']}</p>", unsafe_allow_html=True)
+                st.markdown(f"<p class='pet-detail'>Breed: {pet['breed']}</p>", unsafe_allow_html=True)
+                st.markdown(f"<p class='pet-detail'>Age: {pet['age']}</p>", unsafe_allow_html=True)
+
+
 
                 image_path = os.path.join(IMAGE_FOLDER_OTHER if pet.get('type') == "Other" else IMAGE_FOLDER_CATS, pet["image"])
 
@@ -797,3 +950,6 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
                     st.error(f"An error occurred: {e}")
             else:
                 st.error("Formspree endpoint not found! Make sure that your secrets.toml is properly updated.")
+
+
+
