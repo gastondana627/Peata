@@ -465,7 +465,7 @@ def login():
         if animation_path.lower().endswith((".mp4", ".webm")):
             video_html = f"""
             <div style="display: flex; justify-content: center; margin-bottom: 25px; margin-top: 15px;">
-                <video autoplay loop muted controls playsinline width="400" style="border-radius: 10px;">
+                <video autoplay loop muted controls playsinline width="800" style="border-radius: 10px;">
                     <source src="data:video/mp4;base64,{media_base64}" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
@@ -540,7 +540,7 @@ def create_account():
         if animation_path.lower().endswith((".mp4", ".webm")):
             video_html = f"""
             <div style="display: flex; justify-content: center; margin-bottom: 25px; margin-top: 15px;">
-                <video autoplay loop muted controls playsinline width="400" style="border-radius: 10px;">
+                <video autoplay loop muted controls playsinline width="800" style="border-radius: 10px;">
                     <source src="data:video/mp4;base64,{media_base64}" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
