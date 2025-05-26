@@ -463,6 +463,8 @@ def login():
 
     if media_base64:
         if animation_path.lower().endswith((".mp4", ".webm")):
+            desired_max_width = "450px"
+            
             video_html = f"""
             <div style="display: flex; justify-content: center; margin-bottom: 25px; margin-top: 15px;">
                 <video autoplay loop muted controls playsinline width="800" style="border-radius: 10px;">
@@ -530,23 +532,41 @@ def login():
 
 
 def create_account():
-    # --- TASK 3: CODE TO DISPLAY VIDEO/ANIMATION ---
-    # Replace with your actual file name and path
-    animation_path = "assets/5_second_promo.mp4"  # Or "assets/your_animation.gif"
+    # --- TASK 3: CODE TO DISPLAY VIDEO/ANIMATION (Refined for Responsiveness) ---
+    animation_path = "assets/5_second_promo.mp4"  # Your video file
     media_base64 = get_media_as_base64(animation_path)
     video_html = "" # Initialize to empty string
 
     if media_base64:
         if animation_path.lower().endswith((".mp4", ".webm")):
+            # 1. Define your desired maximum width for the video.
+            #    If you liked 800px as a maximum, set it here. Otherwise, adjust.
+            #    Let's use 600px as an example maximum that's large but still manageable.
+            #    You can change "600px" to "800px" if you prefer that as the max.
+            desired_max_width = "600px"
+
+            # 2. Updated video_html with responsive CSS styling
             video_html = f"""
             <div style="display: flex; justify-content: center; margin-bottom: 25px; margin-top: 15px;">
-                <video autoplay loop muted controls playsinline width="800" style="border-radius: 10px;">
+            
+                <video autoplay loop muted controls playsinline
+                       style="width: 100%; max-width: {desired_max_width}; height: auto; border-radius: 10px;">
                     <source src="data:video/mp4;base64,{media_base64}" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
             </div>
             """
         elif animation_path.lower().endswith(".gif"):
+            # Current GIF part with fixed width.
+            # To make GIF responsive, apply similar style changes as the video:
+            # desired_max_width_gif = "400px"; # example for GIF
+            # video_html = f"""
+            # <div style="display: flex; justify-content: center; margin-bottom: 25px; margin-top: 15px;">
+            #     <img src="data:image/gif;base64,{media_base64}" alt="Signup Animation"
+            #          style="width: 100%; max-width: {desired_max_width_gif}; height: auto; border-radius: 10px;">
+            # </div>
+            # """
+            # Keeping your original fixed-width GIF code for now:
             video_html = f"""
             <div style="display: flex; justify-content: center; margin-bottom: 25px; margin-top: 15px;">
                 <img src="data:image/gif;base64,{media_base64}" alt="Signup Animation" width="250" style="border-radius: 10px;">
@@ -560,6 +580,8 @@ def create_account():
         # Optional warning for development
         # st.warning(f"Signup animation not found at {animation_path}. Please check the path.")
         pass
+
+    # ... rest of your create_account function (st.title, inputs, buttons, etc.)
     # --- END OF TASK 3 CODE ---
 
     # Your existing signup page styling for inputs (if any, otherwise remove this markdown block)
