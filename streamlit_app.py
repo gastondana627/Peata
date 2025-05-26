@@ -6,6 +6,16 @@ print(f"Python Executable used by Streamlit: {sys.executable}")
 
 st.set_page_config(page_title="Animal Shelter", layout="wide")  # MUST come right after importing streamlit
 
+print(f"Python Executable used by Streamlit: {sys.executable}")
+
+# YOUR HELPER FUNCTION HERE
+def get_media_as_base64(path):
+    if not os.path.exists(path):
+        # print(f"Warning: Media file not found at {path}") # Optional: for debugging
+        return None
+    with open(path, "rb") as media_file:
+        return base64.b64encode(media_file.read()).decode()
+
 st.markdown(
     """
     <style>
@@ -112,6 +122,7 @@ import json
 import hashlib
 import datetime
 import importlib
+import base64
 # import sys # Already imported above
 
 # Third-party libraries
@@ -442,14 +453,49 @@ def switch_view(new_view):
     st.session_state.view = new_view
     st.rerun()
 
-# --- Login Function ---
+## Def Login Function
 def login():
+    # --- TASK 3: CODE TO DISPLAY VIDEO/ANIMATION ---
+    # Replace with your actual file name and path
+    animation_path = "assets/5_second_promo.mp4"  # Or "assets/your_animation.gif"
+    media_base64 = get_media_as_base64(animation_path)
+    video_html = "" # Initialize to empty string
+
+    if media_base64:
+        if animation_path.lower().endswith((".mp4", ".webm")):
+            video_html = f"""
+            <div style="display: flex; justify-content: center; margin-bottom: 25px; margin-top: 15px;">
+                <video autoplay loop muted playsinline width="250" style="border-radius: 10px;">
+                    <source src="data:video/mp4;base64,{media_base64}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+            """
+        elif animation_path.lower().endswith(".gif"):
+            video_html = f"""
+            <div style="display: flex; justify-content: center; margin-bottom: 25px; margin-top: 15px;">
+                <img src="data:image/gif;base64,{media_base64}" alt="Login Animation" width="250" style="border-radius: 10px;">
+            </div>
+            """
+        # Add more conditions here for other types if needed (e.g., .ogg for video/ogg)
+
+        if video_html: # Only display if video_html was populated
+            st.markdown(video_html, unsafe_allow_html=True)
+    else:
+        # Optional: You can add a placeholder or warning if the media isn't found,
+        # especially during development. For production, you might just want it to be blank.
+        # st.warning(f"Login animation not found at {animation_path}. Please check the path.")
+        pass
+    # --- END OF TASK 3 CODE ---
+
+    # Your existing login page styling for inputs (if any, otherwise remove this markdown block)
     st.markdown(
         """
         <style>
+        /* Ensure your specific input styles for login are here or in the main CSS block */
         input[type="text"],
         input[type="password"] {
-            background-color: #ffe0f0 !important; /* Light pink */
+            background-color: #ffe0f0 !important;
             color: black !important;
             border: 1px solid #ff99cc !important;
             border-radius: 5px !important;
@@ -469,28 +515,62 @@ def login():
     st.write("Please sign in or create an account.")
     username = st.text_input("Username:", key="login_username_input")
     password = st.text_input("Password:", type="password", key="login_password_input")
+
     if st.button("Sign In", key="login_button"):
-        credentials, leaderboard = load_credentials()
-        if username in credentials and credentials[username]["password"] == hash_password(password):
+        credentials, leaderboard = load_credentials() # Ensure load_credentials is defined
+        if username in credentials and credentials[username]["password"] == hash_password(password): # Ensure hash_password is defined
             st.session_state['username'] = username
-            st.session_state['leaderboard'] = leaderboard # Load leaderboard into session state
+            st.session_state['leaderboard'] = leaderboard
             st.success("Logged in successfully!")
-            st.session_state.view = "main_app" # Switch to main app view on successful login
+            st.session_state.view = "main_app"
             st.rerun()
         else:
             st.error("Invalid credentials.")
-    st.button("Create Account", on_click=lambda: switch_view("signup"), key="go_to_signup_button")
+    st.button("Create Account", on_click=lambda: switch_view("signup"), key="go_to_signup_button") # Ensure switch_view is defined
 
-# --- Create Account Function ---
+
 def create_account():
+    # --- TASK 3: CODE TO DISPLAY VIDEO/ANIMATION ---
+    # Replace with your actual file name and path
+    animation_path = "assets/5_second_promo.mp4"  # Or "assets/your_animation.gif"
+    media_base64 = get_media_as_base64(animation_path)
+    video_html = "" # Initialize to empty string
 
+    if media_base64:
+        if animation_path.lower().endswith((".mp4", ".webm")):
+            video_html = f"""
+            <div style="display: flex; justify-content: center; margin-bottom: 25px; margin-top: 15px;">
+                <video autoplay loop muted playsinline width="250" style="border-radius: 10px;">
+                    <source src="data:video/mp4;base64,{media_base64}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+            """
+        elif animation_path.lower().endswith(".gif"):
+            video_html = f"""
+            <div style="display: flex; justify-content: center; margin-bottom: 25px; margin-top: 15px;">
+                <img src="data:image/gif;base64,{media_base64}" alt="Signup Animation" width="250" style="border-radius: 10px;">
+            </div>
+            """
+        # Add more conditions here for other types if needed
+
+        if video_html: # Only display if video_html was populated
+            st.markdown(video_html, unsafe_allow_html=True)
+    else:
+        # Optional warning for development
+        # st.warning(f"Signup animation not found at {animation_path}. Please check the path.")
+        pass
+    # --- END OF TASK 3 CODE ---
+
+    # Your existing signup page styling for inputs (if any, otherwise remove this markdown block)
     st.markdown(
         """
         <style>
+        /* Ensure your specific input styles for signup are here or in the main CSS block */
         input[type="text"],
         input[type="password"],
-        textarea { /* Include textarea if you have text_area in signup */
-            background-color: #ffe0f0 !important; /* Light pink */
+        textarea {
+            background-color: #ffe0f0 !important;
             color: black !important;
             border: 1px solid #ff99cc !important;
             border-radius: 5px !important;
@@ -519,11 +599,11 @@ def create_account():
     preferred_pet = st.selectbox("Do you prefer:", ["Cats", "Dogs", "Both"], key="signup_pet")
 
     if st.button("Create Account", key="signup_button"):
-        credentials, leaderboard = load_credentials() # Load existing credentials and leaderboard
+        credentials, leaderboard = load_credentials() # Ensure load_credentials is defined
         if new_username in credentials:
             st.error("Username already exists.")
         else:
-            hashed_password = hash_password(new_password)
+            hashed_password = hash_password(new_password) # Ensure hash_password is defined
             credentials[new_username] = {
                 "password": hashed_password,
                 "has_children": has_children,
@@ -535,11 +615,11 @@ def create_account():
                 "lost_pet_history": [],
                 "found_pet_history": [],
             }
-            save_credentials(credentials, leaderboard) # Save updated credentials and leaderboard
+            save_credentials(credentials, leaderboard) # Ensure save_credentials is defined
             st.success("Account created successfully! Please log in.")
-            st.session_state.view = "login" # Go back to login after creating account
+            st.session_state.view = "login"
             st.rerun()
-    st.button("Back to Login", on_click=lambda: switch_view("login"), key="back_to_login_button")
+    st.button("Back to Login", on_click=lambda: switch_view("login"), key="back_to_login_button") # Ensure switch_view is defined
 
 
 # --- Share Pet Function (Persistence Verified) ---
