@@ -131,6 +131,11 @@ import toml
 import streamlit.components.v1 as components
 import requests # Ensure requests is imported if used for forms
 
+
+# Near the top of streamlit_app.py, after imports
+if 'uploader_key_suffix' not in st.session_state:
+    st.session_state.uploader_key_suffix = 0
+
 # Local imports
 # IMPORTANT: Use the new pet_matcher.py
 from pet_matcher import find_match, precompute_shelter_image_features, IMAGE_FOLDER_CATS, IMAGE_FOLDER_OTHER
@@ -841,7 +846,8 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
         """
     )
 
-    # --- Initialize session state for match related flags ---
+    # --- Initialize session state for match related flags AND NEW DISPLAY FLAGS ---
+    # These '..._message_visible' flags might be legacy if not actively used, consider cleanup if so.
     if 'match_message_visible' not in st.session_state:
         st.session_state['match_message_visible'] = False
     if 'report_message_visible' not in st.session_state:
@@ -856,76 +862,120 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
     if 'last_uploaded_file_hash' not in st.session_state: # To prevent re-processing same image
         st.session_state['last_uploaded_file_hash'] = None
 
-    uploaded_found_pet_file = st.file_uploader("Upload an image of the found pet", type=["png", "jpg", "jpeg"], key="found_pet_uploader")
+    # Initialization for the uploader key (from Mishap 1 fix - ensure this is also done near script top if not already)
+    if 'uploader_key_suffix' not in st.session_state:
+        st.session_state.uploader_key_suffix = 0
+
+    # --- START: Initialize new session state variables for Mishap 2 fix ---
+    if 'display_uploaded_found_image' not in st.session_state:
+        st.session_state.display_uploaded_found_image = False
+    if 'current_found_image_bytes' not in st.session_state:
+        st.session_state.current_found_image_bytes = None
+    # --- END: Initialize new session state variables ---
+
+    uploaded_found_pet_file = st.file_uploader(
+        "Upload an image of the found pet",
+        type=["png", "jpg", "jpeg"],
+        key=f"found_pet_uploader_{st.session_state.uploader_key_suffix}" # Dynamic key from Mishap 1
+    )
 
     if uploaded_found_pet_file is not None:
-        # Generate a hash for the uploaded file content to check for changes
-        # Read the file content for hashing, then seek back to 0
-        file_content = uploaded_found_pet_file.getvalue()
+        file_content = uploaded_found_pet_file.getvalue() # Get bytes once
         file_hash = hashlib.sha256(file_content).hexdigest()
-        uploaded_found_pet_file.seek(0) # IMPORTANT: Reset stream position after reading for hashing
+        # uploaded_found_pet_file.seek(0) # Only needed if you re-read uploaded_found_pet_file directly multiple times
 
-        if file_hash != st.session_state['last_uploaded_file_hash']:
+        if file_hash != st.session_state.get('last_uploaded_file_hash'): # Use .get for safety
             # New file uploaded or file changed, reset flags and process
             st.session_state['potential_match_name'] = None
             st.session_state['awaiting_confirmation'] = False
             st.session_state['last_uploaded_file_hash'] = file_hash
             st.session_state['found_pet_reported'] = False # Reset found pet reported flag
-            # Also reset any previous confirmation to allow a fresh check
             st.session_state['last_confirmed_match'] = None
 
-        st.image(uploaded_found_pet_file, caption="Found Pet", width=200)
+            # --- START: Mishap 2 fix - Store image bytes and set flag to display for NEW upload ---
+            st.session_state.current_found_image_bytes = file_content
+            st.session_state.display_uploaded_found_image = True
+            # --- END: Mishap 2 fix ---
 
-        # Optional debug info
-        st.write("Filename:", uploaded_found_pet_file.name)
-        st.write("Size (bytes):", len(uploaded_found_pet_file.getvalue()))
-        st.write("Upload timestamp:", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        # --- START: Mishap 2 fix - Conditional image display based on session state ---
+        if st.session_state.display_uploaded_found_image and st.session_state.current_found_image_bytes:
+            st.image(st.session_state.current_found_image_bytes, caption="Found Pet", width=200)
+        # --- END: Mishap 2 fix ---
 
-        # Only run find_match if not already awaiting confirmation and no potential match yet
-        # Pass the precomputed SHELTER_FEATURES_DB to find_match
-        if not st.session_state['awaiting_confirmation'] and st.session_state['potential_match_name'] is None:
+        # Optional debug info (can be removed later)
+        # st.write("Filename:", uploaded_found_pet_file.name)
+        # st.write("Size (bytes):", len(st.session_state.current_found_image_bytes if st.session_state.current_found_image_bytes else 0))
+        # st.write("Upload timestamp:", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+
+        if not st.session_state.get('awaiting_confirmation') and st.session_state.get('potential_match_name') is None:
             with st.spinner("Searching for a match..."):
-                match_name = find_match(uploaded_found_pet_file, SHELTER_FEATURES_DB)
-                st.session_state['potential_match_name'] = match_name
-                if match_name:
-                    st.session_state['awaiting_confirmation'] = True
-                else:
-                    st.info("No immediate match found. Check back later.")
+                # Create a new BytesIO object for find_match to ensure it gets a fresh stream
+                import io
+                image_for_matching = io.BytesIO(st.session_state.current_found_image_bytes)
+                match_name = find_match(image_for_matching, SHELTER_FEATURES_DB) # Pass the new BytesIO object
+            st.session_state['potential_match_name'] = match_name
+            if match_name:
+                st.session_state['awaiting_confirmation'] = True
+            else:
+                # --- START: Mishap 2 fix - If no match, still allow image to be cleared by user later ---
+                # No specific action needed here for display_uploaded_found_image, it's already True.
+                # The user will see the image and the "no match" info.
+                # They can then choose to upload another, or the "Yes/No" buttons (if a match *was* found) would clear it.
+                # If they upload another, the 'if file_hash != ...' block will handle resetting display for the new one.
+                # --- END: Mishap 2 fix consideration ---
+                st.info("No immediate match found. Check back later.")
+    # --- START: Mishap 2 fix - If no file is uploaded (e.g., after reset), ensure image is not displayed ---
+    elif st.session_state.display_uploaded_found_image: # Check if we *were* showing an image
+         st.session_state.display_uploaded_found_image = False # Hide it if uploader is now empty
+         st.session_state.current_found_image_bytes = None
+    # --- END: Mishap 2 fix ---
+
 
     # Display match confirmation only if a potential match is found and awaiting confirmation
-    if st.session_state['potential_match_name'] and st.session_state['awaiting_confirmation']:
+    if st.session_state.get('potential_match_name') and st.session_state.get('awaiting_confirmation'):
         st.success(f"Possible match found: **{st.session_state['potential_match_name']}**")
         st.write("Does this look like your pet? Please confirm to earn points!")
 
         col_yes, col_no = st.columns(2)
         with col_yes:
             if st.button("Yes, this is my pet!", key="confirm_match_yes"):
-                # Check if points were already awarded for this specific confirmation
-                # Ensure 'last_confirmed_match' exists in session state
-                if 'last_confirmed_match' not in st.session_state:
+                if 'last_confirmed_match' not in st.session_state: # Should be initialized earlier ideally
                     st.session_state['last_confirmed_match'] = None
 
-                if not st.session_state['last_confirmed_match'] == st.session_state['potential_match_name']:
-                    report_found_pet_points() # Award points ONLY on explicit confirmation
-                    st.session_state['last_confirmed_match'] = st.session_state['potential_match_name'] # Store confirmed match to prevent re-awarding
+                if not st.session_state.get('last_confirmed_match') == st.session_state.get('potential_match_name'):
+                    report_found_pet_points()
+                    st.session_state['last_confirmed_match'] = st.session_state.get('potential_match_name')
                     st.success(f"Confirmed! Thank you for helping. Points awarded.")
                 else:
                     st.info("Already confirmed this match and points awarded.")
 
-                st.session_state['potential_match_name'] = None # Clear match
-                st.session_state['awaiting_confirmation'] = False # Reset confirmation state
-                st.session_state['last_uploaded_file_hash'] = None # Allow re-uploading new image
-                uploaded_found_pet_file = None # Clear the file uploader state (visual)
-                st.rerun() # Rerun to clear messages and potential match UI
+                st.session_state['potential_match_name'] = None
+                st.session_state['awaiting_confirmation'] = False
+                st.session_state['last_uploaded_file_hash'] = None
+                # uploaded_found_pet_file = None # This line was already correctly identified as not needed for uploader reset
+
+                # --- START: Mishap 1 & 2 fix - Reset uploader key and image display state ---
+                st.session_state.uploader_key_suffix = st.session_state.get('uploader_key_suffix', 0) + 1
+                st.session_state.display_uploaded_found_image = False
+                st.session_state.current_found_image_bytes = None
+                # --- END: Mishap 1 & 2 fix ---
+                st.rerun()
         with col_no:
             if st.button("No, this is not my pet.", key="confirm_match_no"):
                 st.info("Thank you for clarifying. No points awarded for this match.")
-                st.session_state['potential_match_name'] = None # Clear match
-                st.session_state['awaiting_confirmation'] = False # Reset confirmation state
-                st.session_state['last_uploaded_file_hash'] = None # Allow re-uploading new image
-                uploaded_found_pet_file = None # Clear the file uploader state (visual)
-                st.rerun() # Rerun to clear messages and potential match UI
+                st.session_state['potential_match_name'] = None
+                st.session_state['awaiting_confirmation'] = False
+                st.session_state['last_uploaded_file_hash'] = None
+                st.session_state.uploader_key_suffix += 1 # Mishap 1 fix
 
+                # --- START: Mishap 2 fix - Clear displayed image state ---
+                st.session_state.display_uploaded_found_image = False
+                st.session_state.current_found_image_bytes = None
+                # --- END: Mishap 2 fix ---
+                st.rerun()
+
+                
     # --- Lost Pet Reporting Form ---
     st.subheader("Report a Lost Pet (Earn Points!)") # Updated subtitle to indicate points
     lost_pet_name = st.text_input("Pet's Name:", key="lost_pet_name_input")
