@@ -11,7 +11,7 @@ import io
 # import toml                            # Not needed here, handled by streamlit_app
 
 # Define constants for image folders (good practice)
-IMAGE_FOLDER_CATS = "img/cats"
+IMAGE_FOLDER_CATS = "img/Cats_Q2_2025"
 IMAGE_FOLDER_OTHER = "img/other"
 # You should ensure your img/cats and img/other directories exist and contain images.
 
