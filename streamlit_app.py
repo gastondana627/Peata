@@ -401,7 +401,7 @@ animals = [
     {"name": "Victory Freedom", "breed": "Domestic Shorthair", "age": 3, "image": "Victory Freedom.jpg"},
     {"name": "Kylee", "breed": "Domestic Shorthair", "age": 2, "image": "Kylee.jpg"},
     {"name": "Chicken", "breed": "Domestic Shorthair", "age": 3, "image": "Chicken.jpg"},
-    {"name": "Mouse", "breed": "Domestic Shorthair", "age": "7", "image": "Mouse.jpg"},
+    {"name": "Mouse_20", "breed": "Domestic Shorthair", "age": "7", "image": "Mouse_20.jpg"},
     {"name": "Sam", "breed": "Domestic Shorthair", "age": 8, "image": "Sam.jpg"}
 ]
 
