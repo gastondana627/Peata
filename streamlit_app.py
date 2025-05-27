@@ -256,17 +256,17 @@ animals = [
     # ... your animal data ...
     {"name": "Hay Hay", "breed": "Chicken", "age": 1, "type": "Other", "image": "Hay Hay.jpg", "description": "A lovely chicken looking for a home."},
     # Cats
-    {"name": "Sam", "breed": "Domestic Shorthair", "age": 2, "image": "Sam.jpg"},
-    {"name": "Mouse_20", "breed": "Domestic Shorthair", "age": "3", "image": "Mouse_20.jpg"},
-    {"name": "Chicken", "breed": "Domestic Shorthair", "age": 1, "image": "Chicken.jpg"},
-    {"name": "Callie", "breed": "Domestic Shorthair", "age": 4, "image": "Callie.jpg"},
-    {"name": "Bobby", "breed": "Domestic Shorthair", "age": 2, "image": "Bobby.jpg"},
-    {"name": "Kristi", "breed": "Domestic Shorthair", "age": "3", "image": "Kristi.jpg"},
-    {"name": "Kylee", "breed": "Domestic Shorthair", "age": 1, "image": "Kylee.jpg"},
-    {"name": "Chip_19", "breed": "Domestic Shorthair", "age": 5, "image": "Chip_19.jpg"},
-    {"name": "Chip", "breed": "Domestic Shorthair", "age": 2, "image": "Chip.jpg"},
-    {"name": "Lumi", "breed": "Domestic Shorthair", "age": "3", "image": "Lumi.jpg"},
-    {"name": "Possum", "breed": "Domestic Shorthair", "age": 1, "image": "Possum.jpg"},
+    {"name": "Ocean", "breed": "Domestic Shorthair", "age": 3, "image": "Ocean.jpg"},
+    {"name": "Marie", "breed": "Domestic Shorthair", "age": "3", "image": "Marie.jpg"},
+    {"name": "Tess", "breed": "Domestic Shorthair", "age": 2, "image": "Tess.jpg"},
+    {"name": "Peeta", "breed": "Domestic Shorthair", "age": .2, "image": "Peeta.jpg"},
+    {"name": "Theodore", "breed": "Domestic Shorthair", "age": 2, "image": "Theodore.jpg"},
+    {"name": "Milo", "breed": "Domestic Shorthair", "age": "3", "image": "Milo.jpg"},
+    {"name": "Rudy Valentino", "breed": "Domestic Shorthair", "age": 1, "image": "Rudy Valentino.jpg"},
+    {"name": "Kitty", "breed": "Domestic Shorthair", "age": .55, "image": "Kitty.jpg"},
+    {"name": "Sunscreen", "breed": "Domestic Shorthair", "age": .2, "image": "Sunscreen.jpg"},
+    {"name": "Sundress", "breed": "Domestic Shorthair", "age": .2, "image": "Sundress.jpg"},
+    {"name": "Sunshine", "breed": "Domestic Shorthair", "age": .2, "image": "Sunshine.jpg"},
     {"name": "Victory Freedom", "breed": "Domestic Shorthair", "age": 4, "image": "Victory Freedom.jpg"},
     {"name": "Elliot", "breed": "Domestic Shorthair", "age": 2, "image": "Elliot.jpg"},
     {"name": "Miracle", "breed": "Domestic Shorthair", "age": "3", "image": "Miracle.jpg"},
@@ -553,7 +553,7 @@ def create_account():
                 </video>
             </div>
             """
-            
+
         elif animation_path.lower().endswith(".gif"):
             # Current GIF part with fixed width.
             # To make GIF responsive, apply similar style changes as the video:
