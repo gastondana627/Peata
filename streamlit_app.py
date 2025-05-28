@@ -633,30 +633,47 @@ def create_account():
         unsafe_allow_html=True,
     )
 
-    st.title("Create Your Account")
-    new_username = st.text_input("New Username:", key="signup_username_input")
-    new_password = st.text_input("New Password:", type="password", key="signup_password_input")
+     # vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+    # START OF st.form RESTRUCTURING
+    # vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+    with st.form("create_account_form"):
+        st.title("Create Your Account") # Title is now inside the form for this example
 
-    st.write("Tell us about your ideal pet:")
-    has_children = st.checkbox("Do you have children?", key="signup_children")
-    has_other_pets = st.checkbox("Do you have other pets?", key="signup_other_pets")
-    preferred_size = st.selectbox("Preferred size:", ["Small", "Medium", "Large"], key="signup_size")
-    activity_level = st.select_slider("Preferred activity level:", options=["Low", "Moderate", "High"], key="signup_activity")
-    preferred_pet = st.selectbox("Do you prefer:", ["Cats", "Dogs", "Both"], key="signup_pet")
+        # --- All your input widgets go INSIDE the form ---
+        # Using new variable names and keys for clarity within the form context
+        new_username_form = st.text_input("New Username:", key="signup_username_form_input")
+        new_password_form = st.text_input("New Password:", type="password", key="signup_password_form_input")
 
-    if st.button("Create Account", key="signup_button"):
+        st.write("Tell us about your ideal pet:")
+        has_children_form = st.checkbox("Do you have children?", key="signup_children_form")
+        has_other_pets_form = st.checkbox("Do you have other pets?", key="signup_other_pets_form")
+        preferred_size_form = st.selectbox("Preferred size:", ["Small", "Medium", "Large"], key="signup_size_form")
+        activity_level_form = st.select_slider("Preferred activity level:", options=["Low", "Moderate", "High"], key="signup_activity_form")
+        preferred_pet_form = st.selectbox("Do you prefer:", ["Cats", "Dogs", "Both"], key="signup_pet_form")
+
+        # --- The submit button for the form ---
+        submitted = st.form_submit_button("Create Account")
+
+    # --- Logic to execute AFTER the form is submitted ---
+    # This 'if submitted:' block is now OUTSIDE and AFTER the 'with st.form(...):' block
+    if submitted:
+        # Now you use the variables from the form widgets (e.g., new_username_form)
         credentials, leaderboard = load_credentials() # Ensure load_credentials is defined
-        if new_username in credentials:
+        
+        # Basic validation (you can make this more robust)
+        if not new_username_form or not new_password_form:
+            st.error("Username and Password cannot be empty.")
+        elif new_username_form in credentials:
             st.error("Username already exists.")
         else:
-            hashed_password = hash_password(new_password) # Ensure hash_password is defined
-            credentials[new_username] = {
+            hashed_password = hash_password(new_password_form) # Ensure hash_password is defined
+            credentials[new_username_form] = {
                 "password": hashed_password,
-                "has_children": has_children,
-                "has_other_pets": has_other_pets,
-                "preferred_size": preferred_size,
-                "activity_level": activity_level,
-                "preferred_pet": preferred_pet,
+                "has_children": has_children_form,
+                "has_other_pets": has_other_pets_form,
+                "preferred_size": preferred_size_form,
+                "activity_level": activity_level_form,
+                "preferred_pet": preferred_pet_form,
                 "share_history": [],
                 "lost_pet_history": [],
                 "found_pet_history": [],
@@ -664,9 +681,15 @@ def create_account():
             save_credentials(credentials, leaderboard) # Ensure save_credentials is defined
             st.success("Account created successfully! Please log in.")
             st.session_state.view = "login"
-            ##st.rerun()
+            st.rerun() # Use experimental_rerun to force immediate navigation
+    # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    # END OF st.form RESTRUCTURING AND SUBMISSION LOGIC
+    # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    # The "Back to Login" button is OUTSIDE the form and its processing logic
     st.button("Back to Login", on_click=lambda: switch_view("login"), key="back_to_login_button") # Ensure switch_view is defined
 
+# This would be the end of your create_account() function
 
 # --- Share Pet Function (Persistence Verified) ---
 def share_pet(pet_name):
