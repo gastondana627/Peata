@@ -142,40 +142,61 @@ from pet_matcher import find_match, precompute_shelter_image_features, IMAGE_FOL
 # from datetime import datetime # Already imported above (standard library import)
 
 # --- Check if cv2 (OpenCV) is importable --- # NEW
+# --- Check if cv2 (OpenCV) is importable --- # NEW
 try:
     import cv2
     print("OpenCV (cv2) is successfully imported within app.py!")  # Success message
 except ImportError as e:
     print(f"Error importing cv2 within app.py: {e}")  # Error message if import fails
 
+# Ensure these necessary imports are at the top of your streamlit_app.py file
 from google.oauth2 import service_account
 from google.cloud import aiplatform # Import aiplatform here
 
+# --- START: ADDITION - Initialize the session state key once per session ---
+if 'vertex_ai_initialized' not in st.session_state:
+    st.session_state.vertex_ai_initialized = None # Default to None, indicating not yet determined
+# --- END: ADDITION ---
+
+# --- Vertex AI Initialization Block (with MODIFICATIONS) ---
 try:
     creds_dict = st.secrets["vertex_ai"]
     credentials_gcp = service_account.Credentials.from_service_account_info(creds_dict)
-    print("✅ GCP credentials loaded successfully.")
+    print("✅ GCP credentials loaded successfully.") # Keep this console log
 
-    # Initialize Vertex AI here, once per session if possible, or use @st.cache_resource
     project_id = creds_dict['project_id']
-    # Ensure 'location' is in your secrets.toml or define a default
-    location = creds_dict.get('location', "us-central1") # Get location from secrets or default
+    location = creds_dict.get('location', "us-central1")
 
     @st.cache_resource
-    def initialize_vertex_ai_cached(_creds, proj_id, loc): # Added underscore to _creds
+    def initialize_vertex_ai_cached(_creds, proj_id, loc):
         aiplatform.init(project=proj_id, location=loc, credentials=_creds)
-        print("Vertex AI Initialized (cached)")
-        return True # Return a success indicator
+        print("Vertex AI Initialized (cached)") # Keep this console log
+        return True
 
+    # vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+    # START OF CHANGES: Set session state instead of direct sidebar messages
+    # vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
     if initialize_vertex_ai_cached(credentials_gcp, project_id, location):
-        st.sidebar.success("✅ GCP/Vertex AI initialized.") # Use sidebar for less intrusive messages
+        st.session_state.vertex_ai_initialized = True  # MODIFIED
+        # st.sidebar.success("✅ GCP/Vertex AI initialized.") # REMOVED/COMMENTED OUT
     else:
-        st.sidebar.error("❌ GCP/Vertex AI failed to initialize.")
+        st.session_state.vertex_ai_initialized = False # MODIFIED
+        # st.sidebar.error("❌ GCP/Vertex AI failed to initialize.") # REMOVED/COMMENTED OUT
+    # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    # END OF CHANGES
+    # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 except Exception as e:
-    print(f"❌ Failed to load GCP credentials or initialize Vertex AI: {e}")
-    st.error(f"❌ Failed to load GCP credentials or initialize Vertex AI: {e}")
-
+    print(f"❌ Failed to load GCP credentials or initialize Vertex AI: {e}") # Keep console log
+    # This global st.error is fine if the entire init process fails badly
+    st.error(f"❌ Critical Error: Could not initialize AI services. Some features may be unavailable.")
+    # vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+    # START OF ADDITION: Set session state on exception
+    # vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+    st.session_state.vertex_ai_initialized = False # ADDED
+    # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    # END OF ADDITION
+    # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 import urllib.parse  # Add this line here
 
 # --- IMAGE FOLDERS ---
