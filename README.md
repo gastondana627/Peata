@@ -144,7 +144,7 @@ Geolocation Features: Allow users to specify location for lost/found pets and fi
 Mobile Responsiveness & PWA: Further improve mobile usability and explore Progressive Web App (PWA) features for better offline access or app-like experience.
 Expanded Community Features: Notifications for users when a pet matching their lost report is found, user-to-user messaging (with privacy considerations).
 Full Vertex AI Utilization: Leverage Vertex AI for model training, deployment, and potentially other MLOps capabilities.
-12. Author:
+12. Author: GasMan
 
 Built by: [Gaston Dana - gastondana627]
 This project was developed as a solo effort.

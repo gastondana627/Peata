@@ -609,25 +609,70 @@ def create_account():
     # --- END OF TASK 3 CODE ---
 
     # Your existing signup page styling for inputs (if any, otherwise remove this markdown block)
+    # This st.markdown block is inside your create_account() function (or login())
+
     st.markdown(
         """
         <style>
-        /* Ensure your specific input styles for signup are here or in the main CSS block */
-        input[type="text"],
-        input[type="password"],
-        textarea {
-            background-color: #ffe0f0 !important;
-            color: black !important;
-            border: 1px solid #ff99cc !important;
-            border-radius: 5px !important;
-            padding: 10px !important;
-        }
-        input[type="text"]:focus,
-        input[type="password"]:focus,
-        textarea:focus {
-            border-color: #ff007f !important;
-            box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.25) !important;
-        }
+            /* Your existing styles for inputs, password fields, and textareas */
+            input[type="text"],
+            input[type="password"],
+            textarea {
+                background-color: #ffe0f0 !important; /* Light pink background */
+                color: black !important; /* Text color inside input fields */
+                border: 1px solid #ff99cc !important; /* Optional: pink border */
+                border-radius: 5px !important; /* Optional: rounded corners */
+                padding: 10px !important; /* Optional: padding inside the input */
+            }
+            input[type="text"]:focus,
+            input[type="password"]:focus,
+            textarea:focus {
+                border-color: #ff007f !important; /* Darker pink border on focus */
+                box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.25) !important; /* Optional: pink glow on focus */
+            }
+
+            /* --- START: Previous attempt to change background on hover (now commented out) --- */
+            /*
+            div[data-testid="stVirtualDropdown"] li:hover,
+            div[data-testid="stVirtualDropdown"] div[role="option"]:hover {
+                background-color: #FFC0CB !important; 
+                color: black !important;             
+            }
+
+            div[data-testid="stRadio"] label:hover {
+                background-color: #ffe0f0 !important; 
+            }
+            */
+            /* --- END: Previous attempt --- */
+
+
+            /* vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+            START OF NEW PROPOSAL: Change TEXT color on hover for selectbox/radio
+            Remember: You MUST use your browser's Inspector Tool to find the
+            ACTUAL and CURRENT selectors for the TEXT elements within the options.
+            The selectors below often target a <span> inside the list item or label.
+            vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+            */
+
+            /* For st.selectbox dropdown list item TEXT on hover */
+            /* Replace with YOUR actual selector found via Inspector Tool for the text part */
+            div[data-testid="stVirtualDropdown"] li:hover span,
+            div[data-testid="stVirtualDropdown"] div[role="option"]:hover span { /* Common: targets text within the list item/option */
+                color: #FF69B4 !important; /* Hot Pink text */
+                /* You might want to ensure the background remains the default white or transparent: */
+                /* background-color: transparent !important; */ /* This might prevent the default white highlight if desired */
+            }
+
+            /* For st.radio button option label TEXT on hover */
+            /* Replace with YOUR actual selector found via Inspector Tool for the text part */
+            div[data-testid="stRadio"] label:hover span { /* Common: targets text within the label */
+                color: #FF69B4 !important; /* Hot Pink text */
+            }
+
+            /* ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            END OF NEW PROPOSAL
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            */
         </style>
         """,
         unsafe_allow_html=True,
