@@ -4,7 +4,7 @@ import streamlit as st
 # VERIFY PYTHON PATH - KEEP THIS
 print(f"Python Executable used by Streamlit: {sys.executable}")
 
-st.set_page_config(page_title="Animal Shelter", layout="wide")  # MUST come right after importing streamlit
+st.set_page_config(page_title="Animal Shelter", layout="wide", initial_sidebar_state="collapsed")  # MUST come right after importing streamlit
 
 print(f"Python Executable used by Streamlit: {sys.executable}")
 
