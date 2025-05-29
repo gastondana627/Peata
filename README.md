@@ -1,5 +1,5 @@
 
-1. Project Title: Peata
+1. Project: Peata
 
 
 2. Elevator Pitch / Short Description:
