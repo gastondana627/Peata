@@ -179,3 +179,4 @@ google-cloud-sdk/.DS_Store
 
 # Ignore service account secrets
 Project_Extras/Important/*.jsonProject_Extras/Important/*.json
+.DS_Store
