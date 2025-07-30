@@ -6,7 +6,6 @@
 
 Every year, millions of beloved pets go missing, causing immense distress to their families and overwhelming animal shelters. Peata is a community-focused web application that leverages AI-powered image matching to rapidly connect found pets with their worried owners and to help shelter animals find loving forever homes. By simply uploading a photo, users can tap into a smart system that significantly increases the chances of a happy reunion or a new beginning.
 
-(Optional: If you have your 30-second video hosted, you could add: "Watch our 30-second overview: [Link to Video]")
 
 
 
