@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Peata: Interactive Strategy Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals & Subtle Accents -->
+    <!-- Application Structure Plan: A tab-based navigation dashboard is chosen to present the core strategic pillars of the Peata project: The 'Big Picture' (mission), 'Architecture' (how it's built), 'Features' (what it does), and 'Impact' (why it matters). This structure breaks down the dense report into digestible, thematic sections, allowing users (like stakeholders or hackathon judges) to quickly navigate to their area of interest. The flow is designed to go from high-level vision to technical details, to tangible features, and finally to the user-centric philosophy, mirroring a typical presentation narrative for maximum clarity and persuasive impact. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Dual-AI (Vertex/Gemma) with fallback logic -> Goal: Explain a complex technical process simply -> Viz/Method: HTML/CSS diagram -> Interaction: Hover to highlight paths -> Justification: A visual flow is more intuitive than text for explaining a conditional process. It clarifies the 'resilience-as-a-feature' concept instantly.
+        - Report Info: Five "Rescue & Reunite Hub" tools -> Goal: Detail the app's core functionality -> Viz/Method: Interactive HTML cards -> Interaction: Click to reveal more details -> Justification: Cards provide a high-level overview while allowing users to drill down into specific tools without cluttering the main view.
+        - Report Info: Hackathon priorities -> Goal: Show resource allocation -> Viz/Method: Chart.js Doughnut Chart -> Interaction: Tooltips on hover -> Justification: A doughnut chart is excellent for showing parts of a whole, making the strategic focus on the video demo and core features immediately apparent.
+        - Report Info: UI/UX Principles -> Goal: Showcase the empathetic design philosophy -> Viz/Method: Styled list with icons -> Interaction: Static, clear text -> Justification: For principles and philosophy, clear, well-formatted text with iconography is more effective than a complex chart.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .tab-active {
+            border-bottom: 2px solid #A5B4FC;
+            color: #374151;
+            font-weight: 600;
+        }
+        .tab-inactive {
+            color: #6B7280;
+        }
+        .content-section {
+            display: none;
+        }
+        .content-active {
+            display: block;
+        }
+        .card-flip {
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+        }
+        .card-flip.is-flipped {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+        .card-back {
+            transform: rotateY(180deg);
+        }
+        .chart-container {
+            position: relative; 
+            width: 100%; 
+            max-width: 400px; 
+            margin-left: auto; 
+            margin-right: auto; 
+            height: 400px;
+            max-height: 400px;
+        }
+    </style>
+</head>
+<body class="bg-[#FDFBF8] text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900">Peata 🐾</h1>
+            <p class="mt-2 text-lg text-gray-600">Interactive Strategy & Architecture Dashboard</p>
+        </header>
+
+        <nav class="flex justify-center border-b border-gray-200 mb-8">
+            <button class="tab tab-active py-4 px-6 block hover:text-indigo-500 focus:outline-none" data-tab="overview">The Big Picture</button>
+            <button class="tab tab-inactive py-4 px-6 block hover:text-indigo-500 focus:outline-none" data-tab="architecture">Core Architecture</button>
+            <button class="tab tab-inactive py-4 px-6 block hover:text-indigo-500 focus:outline-none" data-tab="features">Feature Deep Dive</button>
+            <button class="tab tab-inactive py-4 px-6 block hover:text-indigo-500 focus:outline-none" data-tab="impact">Design & Impact</button>
+        </nav>
+
+        <main>
+            <!-- Overview Section -->
+            <section id="overview" class="content-section content-active">
+                <div class="bg-white p-8 rounded-xl shadow-sm">
+                    <h2 class="text-2xl font-bold mb-4 text-center">Our Mission: A Resilient & Empathetic Lifeline</h2>
+                    <p class="text-gray-700 leading-relaxed max-w-3xl mx-auto text-center">
+                        Peata is more than a tech project; it's a community-focused application designed to rescue and reunite lost pets. Our strategy for the upcoming hackathon is to evolve Peata into an even more powerful tool by introducing the **"Rescue & Reunite Hub"** and a groundbreaking **dual-AI system**. This dashboard visualizes our plan to create a robust, user-friendly, and emotionally resonant application that serves our community in moments of crisis.
+                    </p>
+                    <div class="mt-8 grid md:grid-cols-2 gap-8 items-center">
+                        <div class="text-center md:text-left">
+                            <h3 class="text-xl font-semibold mb-2">Hackathon Priorities</h3>
+                            <p class="text-gray-600 mb-4">Our two-week sprint is strategically focused. We are prioritizing the development of a compelling video demo and the core functionalities of the dual-AI system to create the most impactful presentation.</p>
+                             <ul class="text-left space-y-2">
+                                <li class="flex items-center"><span class="text-indigo-500 mr-2">■</span> 40%: Video Demo & Storytelling</li>
+                                <li class="flex items-center"><span class="text-green-500 mr-2">■</span> 30%: Core Dual-AI & Fallback Logic</li>
+                                <li class="flex items-center"><span class="text-yellow-500 mr-2">■</span> 20%: "Rescue & Reunite Hub" (2-3 Tools)</li>
+                                <li class="flex items-center"><span class="text-red-500 mr-2">■</span> 10%: UI Polish & Custom Buttons</li>
+                            </ul>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="prioritiesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Architecture Section -->
+            <section id="architecture" class="content-section">
+                 <div class="bg-white p-8 rounded-xl shadow-sm">
+                    <h2 class="text-2xl font-bold mb-2 text-center">The Dual-AI Engine: Resilience-as-a-Feature</h2>
+                    <p class="text-gray-600 leading-relaxed max-w-3xl mx-auto text-center mb-8">
+                        Peata's core innovation is its hybrid AI architecture. By combining the power of cloud-based Vertex AI with the efficiency of on-device Gemma, we guarantee 24/7 chatbot assistance, even during power outages. This diagram shows how the app intelligently switches between models to provide uninterrupted support.
+                    </p>
+                    <div class="border border-gray-200 rounded-lg p-6 bg-gray-50">
+                        <div class="text-center mb-4">
+                            <div class="font-semibold bg-white p-3 rounded-lg shadow-sm inline-block">User Sends Chat Message</div>
+                            <div class="h-8 w-px bg-gray-400 mx-auto mt-2"></div>
+                             <div class="text-2xl mt-2">👇</div>
+                        </div>
+
+                        <div class="flex justify-center items-center my-4">
+                            <div class="font-semibold bg-indigo-100 text-indigo-800 p-3 rounded-lg shadow-sm">Check Internet Connectivity</div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4 text-center mt-4">
+                            <div>
+                                <div class="h-8 w-px bg-gray-400 mx-auto"></div>
+                                <div class="font-semibold text-green-700">✅ Connected</div>
+                            </div>
+                             <div>
+                                <div class="h-8 w-px bg-gray-400 mx-auto"></div>
+                                <div class="font-semibold text-red-700">❌ Offline</div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4 text-center mt-2">
+                            <!-- Online Path -->
+                            <div class="border-2 border-green-200 bg-green-50 p-4 rounded-lg">
+                                <div class="text-2xl">☁️</div>
+                                <h4 class="font-bold mt-2">Vertex AI (Cloud)</h4>
+                                <p class="text-sm text-gray-600 mt-1">For complex queries, pet identification, and advanced analysis.</p>
+                                <div class="h-6 w-px bg-gray-300 mx-auto my-2"></div>
+                                <div class="text-xs text-gray-500">API Call via `st.secrets`</div>
+                            </div>
+                            <!-- Offline Path -->
+                            <div class="border-2 border-red-200 bg-red-50 p-4 rounded-lg">
+                                <div class="text-2xl">📱</div>
+                                <h4 class="font-bold mt-2">Gemma (Local)</h4>
+                                <p class="text-sm text-gray-600 mt-1">Provides instant, reliable chat support and basic info retrieval.</p>
+                                <div class="h-6 w-px bg-gray-300 mx-auto my-2"></div>
+                                <div class="text-xs text-gray-500">On-Device Inference</div>
+                            </div>
+                        </div>
+                         <div class="relative mt-4">
+                            <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                                <div class="w-full border-t border-gray-300 border-dashed"></div>
+                            </div>
+                        </div>
+                        <div class="flex justify-center mt-8">
+                             <div class="text-2xl mr-4">👇</div>
+                            <div class="font-semibold bg-white p-3 rounded-lg shadow-sm inline-block">User Receives AI Response</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Features Section -->
+            <section id="features" class="content-section">
+                <div class="bg-white p-8 rounded-xl shadow-sm">
+                    <h2 class="text-2xl font-bold mb-2 text-center">The Rescue & Reunite Hub</h2>
+                    <p class="text-gray-600 leading-relaxed max-w-3xl mx-auto text-center mb-8">
+                        The Hub is a bundled toolkit with five distinct features designed to empower pet owners. Click on any tool to learn more about its specific function and the technology behind it.
+                    </p>
+                    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Card 1 -->
+                        <div class="perspective-1000">
+                            <div class="relative card-flip h-64">
+                                <div class="card-front absolute w-full h-full bg-indigo-100 rounded-lg p-6 flex flex-col justify-center items-center text-center shadow-md cursor-pointer">
+                                    <div class="text-4xl">📢</div>
+                                    <h3 class="text-xl font-bold mt-2">Lost Pet Reporting</h3>
+                                    <p class="text-indigo-800 mt-2">Instantly create and share a digital "lost pet" poster.</p>
+                                </div>
+                                <div class="card-back absolute w-full h-full bg-indigo-200 rounded-lg p-6 text-center shadow-md cursor-pointer">
+                                    <h4 class="font-bold">How it Works</h4>
+                                    <p class="text-sm mt-2">Users fill out an `st.form` with pet details and upload a photo. This data is saved to our database and generates a shareable alert for social media.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Card 2 -->
+                        <div class="perspective-1000">
+                            <div class="relative card-flip h-64">
+                                <div class="card-front absolute w-full h-full bg-green-100 rounded-lg p-6 flex flex-col justify-center items-center text-center shadow-md cursor-pointer">
+                                    <div class="text-4xl">🗺️</div>
+                                    <h3 class="text-xl font-bold mt-2">Shelter Tracker</h3>
+                                    <p class="text-green-800 mt-2">Find nearby shelters and rescue organizations quickly.</p>
+                                </div>
+                                <div class="card-back absolute w-full h-full bg-green-200 rounded-lg p-6 text-center shadow-md cursor-pointer">
+                                    <h4 class="font-bold">How it Works</h4>
+                                    <p class="text-sm mt-2">Queries our database for local shelters based on user location. Results are displayed in a table and can be plotted on an interactive map using `st.map`.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Card 3 -->
+                        <div class="perspective-1000">
+                            <div class="relative card-flip h-64">
+                                <div class="card-front absolute w-full h-full bg-yellow-100 rounded-lg p-6 flex flex-col justify-center items-center text-center shadow-md cursor-pointer">
+                                    <div class="text-4xl">🔍</div>
+                                    <h3 class="text-xl font-bold mt-2">AI-Powered Search</h3>
+                                    <p class="text-yellow-800 mt-2">Use a photo to search for a found pet in our database.</p>
+                                </div>
+                                <div class="card-back absolute w-full h-full bg-yellow-200 rounded-lg p-6 text-center shadow-md cursor-pointer">
+                                    <h4 class="font-bold">How it Works</h4>
+                                    <p class="text-sm mt-2">A photo of a found pet is sent to Vertex AI's vision model, which extracts features (e.g., "golden retriever," "blue collar") to find matches in the lost pets database.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Card 4 -->
+                        <div class="perspective-1000">
+                            <div class="relative card-flip h-64">
+                                <div class="card-front absolute w-full h-full bg-blue-100 rounded-lg p-6 flex flex-col justify-center items-center text-center shadow-md cursor-pointer">
+                                    <div class="text-4xl">🤝</div>
+                                    <h3 class="text-xl font-bold mt-2">Community Alerts</h3>
+                                    <p class="text-blue-800 mt-2">Notify the local Peata community about a lost or found pet.</p>
+                                </div>
+                                <div class="card-back absolute w-full h-full bg-blue-200 rounded-lg p-6 text-center shadow-md cursor-pointer">
+                                     <h4 class="font-bold">How it Works</h4>
+                                    <p class="text-sm mt-2">Triggers a notification (future feature) to other users in the geographical area, creating a network of helpers to amplify the search effort.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Card 5 -->
+                        <div class="perspective-1000">
+                            <div class="relative card-flip h-64">
+                                <div class="card-front absolute w-full h-full bg-purple-100 rounded-lg p-6 flex flex-col justify-center items-center text-center shadow-md cursor-pointer">
+                                    <div class="text-4xl">📚</div>
+                                    <h3 class="text-xl font-bold mt-2">Resource Guide</h3>
+                                    <p class="text-purple-800 mt-2">Access helpful articles and guides for pet owners.</p>
+                                </div>
+                                <div class="card-back absolute w-full h-full bg-purple-200 rounded-lg p-6 text-center shadow-md cursor-pointer">
+                                     <h4 class="font-bold">How it Works</h4>
+                                    <p class="text-sm mt-2">A curated collection of static content on pet safety, what to do when a pet is lost, and local regulations, organized using `st.expander` for a clean UI.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Impact Section -->
+            <section id="impact" class="content-section">
+                <div class="bg-white p-8 rounded-xl shadow-sm">
+                    <h2 class="text-2xl font-bold mb-2 text-center">Designing for Emotion & Inclusion</h2>
+                    <p class="text-gray-600 leading-relaxed max-w-3xl mx-auto text-center mb-8">
+                        Our goal is to bridge the gap between technology and non-technical users. We achieve this through an empathetic design philosophy that prioritizes emotional connection, accessibility, and compelling storytelling, ensuring Peata is a tool for everyone in the community.
+                    </p>
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <div class="bg-gray-50 p-6 rounded-lg">
+                            <h3 class="font-semibold text-lg mb-4">UI/UX & Emotional Design</h3>
+                            <ul class="space-y-3">
+                                <li class="flex items-start">
+                                    <span class="text-2xl mr-3">🎨</span>
+                                    <div>
+                                        <h4 class="font-semibold">Custom UI & Personality</h4>
+                                        <p class="text-gray-600 text-sm">Using custom PNG/MP4 buttons with our Peata mascot to create a warm, personable helper, not a cold app.</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="text-2xl mr-3">❤️</span>
+                                    <div>
+                                        <h4 class="font-semibold">Empathetic Copy</h4>
+                                        <p class="text-gray-600 text-sm">Crafting UI text with a warm, helpful, and reassuring tone to support users during stressful times.</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="text-2xl mr-3">🎬</span>
+                                    <div>
+                                        <h4 class="font-semibold">Storytelling Focus</h4>
+                                        <p class="text-gray-600 text-sm">Our video demo will use real-life scenarios of families being reunited with their pets to create a powerful emotional connection.</p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="bg-gray-50 p-6 rounded-lg">
+                            <h3 class="font-semibold text-lg mb-4">Core Accessibility Principles</h3>
+                            <ul class="space-y-3">
+                                <li class="flex items-start">
+                                    <span class="text-2xl mr-3">👁️</span>
+                                    <div>
+                                        <h4 class="font-semibold">High Contrast & Alt Text</h4>
+                                        <p class="text-gray-600 text-sm">Ensuring text is readable for visually impaired users and that all images have descriptive alt text for screen readers.</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="text-2xl mr-3">⌨️</span>
+                                    <div>
+                                        <h4 class="font-semibold">Keyboard Navigation</h4>
+                                        <p class="text-gray-600 text-sm">Making sure every feature in the app is fully usable without a mouse to support users with mobility impairments.</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="text-2xl mr-3">字幕</span>
+                                    <div>
+                                        <h4 class="font-semibold">Subtitles & Transcription</h4>
+                                        <p class="text-gray-600 text-sm">Providing subtitles for all video content to assist hearing-impaired users and improve comprehension for all.</p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabs = document.querySelectorAll('.tab');
+            const sections = document.querySelectorAll('.content-section');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    tabs.forEach(t => {
+                        t.classList.remove('tab-active');
+                        t.classList.add('tab-inactive');
+                    });
+                    this.classList.remove('tab-inactive');
+                    this.classList.add('tab-active');
+
+                    const tabId = this.getAttribute('data-tab');
+                    
+                    sections.forEach(section => {
+                        section.classList.remove('content-active');
+                        if (section.id === tabId) {
+                            section.classList.add('content-active');
+                        }
+                    });
+                });
+            });
+
+            const cards = document.querySelectorAll('.card-flip');
+            cards.forEach(card => {
+                card.addEventListener('click', function() {
+                    this.classList.toggle('is-flipped');
+                });
+            });
+
+            const ctx = document.getElementById('prioritiesChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Video Demo', 'Core AI Logic', 'Hub Features', 'UI Polish'],
+                    datasets: [{
+                        label: 'Hackathon Focus',
+                        data: [40, 30, 20, 10],
+                        backgroundColor: [
+                            'rgba(165, 180, 252, 0.8)', // indigo
+                            'rgba(110, 231, 183, 0.8)', // green
+                            'rgba(252, 211, 77, 0.8)',  // yellow
+                            'rgba(248, 113, 113, 0.8)'   // red
+                        ],
+                        borderColor: [
+                            'rgba(129, 140, 248, 1)',
+                            'rgba(52, 211, 153, 1)',
+                            'rgba(251, 191, 36, 1)',
+                            'rgba(239, 68, 68, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed !== null) {
+                                        label += context.parsed + '%';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
