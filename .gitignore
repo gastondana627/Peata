@@ -174,4 +174,4 @@ database.json
 # Ignore Google Cloud SDK and CLI installation files
 google-cloud-sdk-latest-darwin-x86_64.tar.gz
 google-cloud-cli-darwin-x86_64.tar.gz
-google-cloud-sdk/
+google-cloud-sdk/.DS_Store
