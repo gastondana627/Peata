@@ -14,13 +14,11 @@ def check_internet_connection():
 # The @st.cache_resource decorator is CRUCIAL for performance, as it
 # prevents the model from being re-downloaded or re-loaded on every user interaction.
 # It also handles caching the model in memory for subsequent uses.
-@st.cache_resource(show_spinner="Loading Gemma 3n model (this may take a while)...")
+@st.cache_resource(show_spinner="Loading Gemma-2 model (this may take a while)...")
 def load_gemma_model():
     try:
-        # Load the Gemma 2B instruction-tuned model.
-        # We use 4-bit quantization to reduce memory usage, making it
-        # more likely to run on Streamlit Cloud and your local M1 Mac.
-        # This is a key step for deployment success.
+        # We are now loading the new, second-generation Gemma model.
+        # It has the same parameter count but with improved performance and safety.
         bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_quant_type="nf4",
@@ -28,11 +26,11 @@ def load_gemma_model():
         )
 
         model = AutoModelForCausalLM.from_pretrained(
-            "google/gemma-2b-it",
+            "google/gemma-2-2b-it",
             quantization_config=bnb_config,
             device_map="auto" # This automatically uses your Mac's MPS for acceleration.
         )
-        tokenizer = AutoTokenizer.from_pretrained("google/gemma-2b-it")
+        tokenizer = AutoTokenizer.from_pretrained("google/gemma-2-2b-it")
         return model, tokenizer
     except Exception as e:
         st.error(f"Error loading Gemma model locally: {e}. Please ensure all dependencies are installed and the model can fit in memory.")
@@ -91,13 +89,11 @@ def get_chatbot_response(user_prompt):
             return response
         else:
             # If Vertex AI fails despite an internet connection, fall back to Gemma.
-            st.session_state.ai_mode = "Fallback (Gemma 3n)"
-            st.warning("Vertex AI failed. Falling back to Gemma 3n.")
+            st.session_state.ai_mode = "Fallback (Gemma 2)"
+            st.warning("Vertex AI failed. Falling back to Gemma 2.")
             return get_gemma_response_from_model(user_prompt)
     else:
         # If there is no internet, use Gemma as the primary model.
-        st.session_state.ai_mode = "Offline (Gemma 3n)"
-        st.info("No internet connection detected. Using Gemma 3n offline.")
+        st.session_state.ai_mode = "Offline (Gemma 2)"
+        st.info("No internet connection detected. Using Gemma 2 offline.")
         return get_gemma_response_from_model(user_prompt)
-
-
