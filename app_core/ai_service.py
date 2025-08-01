@@ -5,14 +5,10 @@ import vertexai
 from vertexai.generative_models import GenerativeModel
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
-# This function checks for an active internet connection.
-# It makes a simple request to a reliable public server (like Google's DNS).
-def check_internet_connection(timeout=5):
-    try:
-        requests.get("http://www.google.com", timeout=timeout)
-        return True
-    except (requests.ConnectionError, requests.Timeout):
-        return False
+# This function now reads from a session state variable instead of a real network check.
+def check_internet_connection():
+    # We default to True (online) if the variable hasn't been set yet.
+    return st.session_state.get("is_online", True)
 
 # This function loads the Gemma model from the Hugging Face Hub.
 # The @st.cache_resource decorator is CRUCIAL for performance, as it
@@ -103,3 +99,5 @@ def get_chatbot_response(user_prompt):
         st.session_state.ai_mode = "Offline (Gemma 3n)"
         st.info("No internet connection detected. Using Gemma 3n offline.")
         return get_gemma_response_from_model(user_prompt)
+
+

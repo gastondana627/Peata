@@ -1,17 +1,37 @@
 import sys
 import streamlit as st
+import os
+import json
+import hashlib
+import datetime
+import importlib
+import base64
+import pandas as pd
+import toml
+import streamlit.components.v1 as components
+import requests
+from google.oauth2 import service_account
+from google.cloud import aiplatform
+# --- START OF NEW IMPORTS AND SESSION STATE ---
+from app_core.ai_service import get_chatbot_response
 
 # VERIFY PYTHON PATH - KEEP THIS
 print(f"Python Executable used by Streamlit: {sys.executable}")
 
 st.set_page_config(page_title="Animal Shelter", layout="wide", initial_sidebar_state="collapsed")  # MUST come right after importing streamlit
 
+# Initialize the new session state variables for the chat history and AI mode
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "ai_mode" not in st.session_state:
+    st.session_state.ai_mode = "Initializing..."
+# --- END OF NEW IMPORTS ---
+
 print(f"Python Executable used by Streamlit: {sys.executable}")
 
 # YOUR HELPER FUNCTION HERE
 def get_media_as_base64(path):
     if not os.path.exists(path):
-        # print(f"Warning: Media file not found at {path}") # Optional: for debugging
         return None
     with open(path, "rb") as media_file:
         return base64.b64encode(media_file.read()).decode()
@@ -20,16 +40,11 @@ st.markdown(
     """
     <style>
     /* Main background color for the entire app (excluding sidebar, which is Streamlit's theme) */
-    /* You may need to inspect your browser to find the correct data-testid or class for the main content wrapper. */
-    /* Common selectors include: [data-testid="stAppViewContainer"], [data-testid="stApp"] > div > section.main */
-    /* Or the auto-generated classes like 'st-emotion-cache-z5fcl4', 'st-emotion-cache-czk54k' etc. */
-    /* Try with a broad selector first, then refine if it's too aggressive. */
     .stApp {
         background-color: #1A1A1A; /* A dark grey/almost black for the main background */
     }
 
     /* Target the main content wrapper explicitly if the .stApp isn't enough */
-    /* IMPORTANT: You might need to change these class names based on your browser's inspector! */
     div.st-emotion-cache-z5fcl4,
     div.st-emotion-cache-czk54k,
     div[data-testid="stVerticalBlock"] > div.st-emotion-cache-z5fcl4 { /* Common inner container for content */
@@ -104,8 +119,6 @@ st.markdown(
     .st-emotion-cache-1v4a6f7 > div {
         color: #FFC0CB !important;
     }
-
-
     </style>
     """,
     unsafe_allow_html=True,
@@ -141,7 +154,6 @@ if 'uploader_key_suffix' not in st.session_state:
 from pet_matcher import find_match, precompute_shelter_image_features, IMAGE_FOLDER_CATS, IMAGE_FOLDER_OTHER
 # from datetime import datetime # Already imported above (standard library import)
 
-# --- Check if cv2 (OpenCV) is importable --- # NEW
 # --- Check if cv2 (OpenCV) is importable --- # NEW
 try:
     import cv2
@@ -936,7 +948,6 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
     )
 
     # --- Initialize session state for match related flags AND NEW DISPLAY FLAGS ---
-    # These '..._message_visible' flags might be legacy if not actively used, consider cleanup if so.
     if 'match_message_visible' not in st.session_state:
         st.session_state['match_message_visible'] = False
     if 'report_message_visible' not in st.session_state:
@@ -951,77 +962,51 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
     if 'last_uploaded_file_hash' not in st.session_state: # To prevent re-processing same image
         st.session_state['last_uploaded_file_hash'] = None
 
-    # Initialization for the uploader key (from Mishap 1 fix - ensure this is also done near script top if not already)
     if 'uploader_key_suffix' not in st.session_state:
         st.session_state.uploader_key_suffix = 0
 
-    # --- START: Initialize new session state variables for Mishap 2 fix ---
     if 'display_uploaded_found_image' not in st.session_state:
         st.session_state.display_uploaded_found_image = False
     if 'current_found_image_bytes' not in st.session_state:
         st.session_state.current_found_image_bytes = None
-    # --- END: Initialize new session state variables ---
 
     uploaded_found_pet_file = st.file_uploader(
         "Upload an image of the found pet",
         type=["png", "jpg", "jpeg"],
-        key=f"found_pet_uploader_{st.session_state.uploader_key_suffix}" # Dynamic key from Mishap 1
+        key=f"found_pet_uploader_{st.session_state.uploader_key_suffix}"
     )
 
     if uploaded_found_pet_file is not None:
-        file_content = uploaded_found_pet_file.getvalue() # Get bytes once
+        file_content = uploaded_found_pet_file.getvalue()
         file_hash = hashlib.sha256(file_content).hexdigest()
-        # uploaded_found_pet_file.seek(0) # Only needed if you re-read uploaded_found_pet_file directly multiple times
 
-        if file_hash != st.session_state.get('last_uploaded_file_hash'): # Use .get for safety
-            # New file uploaded or file changed, reset flags and process
+        if file_hash != st.session_state.get('last_uploaded_file_hash'):
             st.session_state['potential_match_name'] = None
             st.session_state['awaiting_confirmation'] = False
             st.session_state['last_uploaded_file_hash'] = file_hash
-            st.session_state['found_pet_reported'] = False # Reset found pet reported flag
+            st.session_state['found_pet_reported'] = False
             st.session_state['last_confirmed_match'] = None
-
-            # --- START: Mishap 2 fix - Store image bytes and set flag to display for NEW upload ---
             st.session_state.current_found_image_bytes = file_content
             st.session_state.display_uploaded_found_image = True
-            # --- END: Mishap 2 fix ---
 
-        # --- START: Mishap 2 fix - Conditional image display based on session state ---
         if st.session_state.display_uploaded_found_image and st.session_state.current_found_image_bytes:
             st.image(st.session_state.current_found_image_bytes, caption="Found Pet", width=200)
-        # --- END: Mishap 2 fix ---
-
-        # Optional debug info (can be removed later)
-        # st.write("Filename:", uploaded_found_pet_file.name)
-        # st.write("Size (bytes):", len(st.session_state.current_found_image_bytes if st.session_state.current_found_image_bytes else 0))
-        # st.write("Upload timestamp:", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-
 
         if not st.session_state.get('awaiting_confirmation') and st.session_state.get('potential_match_name') is None:
             with st.spinner("Searching for a match..."):
-                # Create a new BytesIO object for find_match to ensure it gets a fresh stream
                 import io
                 image_for_matching = io.BytesIO(st.session_state.current_found_image_bytes)
-                match_name = find_match(image_for_matching, SHELTER_FEATURES_DB) # Pass the new BytesIO object
+                match_name = find_match(image_for_matching, SHELTER_FEATURES_DB)
             st.session_state['potential_match_name'] = match_name
             if match_name:
                 st.session_state['awaiting_confirmation'] = True
             else:
-                # --- START: Mishap 2 fix - If no match, still allow image to be cleared by user later ---
-                # No specific action needed here for display_uploaded_found_image, it's already True.
-                # The user will see the image and the "no match" info.
-                # They can then choose to upload another, or the "Yes/No" buttons (if a match *was* found) would clear it.
-                # If they upload another, the 'if file_hash != ...' block will handle resetting display for the new one.
-                # --- END: Mishap 2 fix consideration ---
                 st.info("No immediate match found. Check back later.")
-    # --- START: Mishap 2 fix - If no file is uploaded (e.g., after reset), ensure image is not displayed ---
-    elif st.session_state.display_uploaded_found_image: # Check if we *were* showing an image
-         st.session_state.display_uploaded_found_image = False # Hide it if uploader is now empty
+    elif st.session_state.display_uploaded_found_image:
+         st.session_state.display_uploaded_found_image = False
          st.session_state.current_found_image_bytes = None
-    # --- END: Mishap 2 fix ---
 
 
-    # Display match confirmation only if a potential match is found and awaiting confirmation
     if st.session_state.get('potential_match_name') and st.session_state.get('awaiting_confirmation'):
         st.success(f"Possible match found: **{st.session_state['potential_match_name']}**")
         st.write("Does this look like your pet? Please confirm to earn points!")
@@ -1029,7 +1014,7 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
         col_yes, col_no = st.columns(2)
         with col_yes:
             if st.button("Yes, this is my pet!", key="confirm_match_yes"):
-                if 'last_confirmed_match' not in st.session_state: # Should be initialized earlier ideally
+                if 'last_confirmed_match' not in st.session_state:
                     st.session_state['last_confirmed_match'] = None
 
                 if not st.session_state.get('last_confirmed_match') == st.session_state.get('potential_match_name'):
@@ -1042,13 +1027,9 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
                 st.session_state['potential_match_name'] = None
                 st.session_state['awaiting_confirmation'] = False
                 st.session_state['last_uploaded_file_hash'] = None
-                # uploaded_found_pet_file = None # This line was already correctly identified as not needed for uploader reset
-
-                # --- START: Mishap 1 & 2 fix - Reset uploader key and image display state ---
                 st.session_state.uploader_key_suffix = st.session_state.get('uploader_key_suffix', 0) + 1
                 st.session_state.display_uploaded_found_image = False
                 st.session_state.current_found_image_bytes = None
-                # --- END: Mishap 1 & 2 fix ---
                 st.rerun()
         with col_no:
             if st.button("No, this is not my pet.", key="confirm_match_no"):
@@ -1056,17 +1037,12 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
                 st.session_state['potential_match_name'] = None
                 st.session_state['awaiting_confirmation'] = False
                 st.session_state['last_uploaded_file_hash'] = None
-                st.session_state.uploader_key_suffix += 1 # Mishap 1 fix
-
-                # --- START: Mishap 2 fix - Clear displayed image state ---
+                st.session_state.uploader_key_suffix += 1
                 st.session_state.display_uploaded_found_image = False
                 st.session_state.current_found_image_bytes = None
-                # --- END: Mishap 2 fix ---
                 st.rerun()
-
                 
-    # --- Lost Pet Reporting Form ---
-    st.subheader("Report a Lost Pet (Earn Points!)") # Updated subtitle to indicate points
+    st.subheader("Report a Lost Pet (Earn Points!)")
     lost_pet_name = st.text_input("Pet's Name:", key="lost_pet_name_input")
     lost_pet_breed = st.text_input("Pet's Breed:", key="lost_pet_breed_input")
     lost_pet_image = st.file_uploader("Upload lost pet photo", type=["jpg", "jpeg", "png"], key="lost_pet_image_uploader")
@@ -1075,31 +1051,27 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
         st.image(lost_pet_image, caption="Lost Pet", width=200)
 
     if st.button("Report Lost Pet", key="report_lost_pet_button"):
-        if not lost_pet_name or not lost_pet_breed: # Check if name or breed are empty
+        if not lost_pet_name or not lost_pet_breed:
             st.error("Please provide the pet's name and breed.")
-        elif lost_pet_image is None: # Check if image is uploaded
-            st.error("Please upload an image of the lost pet to submit the report.") # Display error message
-        else: # Proceed with report submission if all info is provided
+        elif lost_pet_image is None:
+            st.error("Please upload an image of the lost pet to submit the report.")
+        else:
             data = load_data()
             data["lost_pets"].append({
                 "name": lost_pet_name,
                 "breed": lost_pet_breed,
-                "image": lost_pet_image.name, # Save image name
+                "image": lost_pet_image.name,
             })
             save_data(data)
-            report_lost_pet_points(lost_pet_name, lost_pet_breed) # Call new function to award points
-            st.rerun() # Rerun to clear the form after submission and show message
+            report_lost_pet_points(lost_pet_name, lost_pet_breed)
+            st.rerun()
 
-
-    # --- Animals Available for Adoption Section ---
     st.header("Animals Available for Adoption")
 
     num_cols = 4
     cols = st.columns(num_cols)
     pet_index = 0
 
-    # --- Pagination for Animals Section ---
-    # Initialize page_animals if not already in session_state
     if 'animals_page_radio' not in st.session_state:
         st.session_state['animals_page_radio'] = 1
 
@@ -1114,8 +1086,6 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
                 st.markdown(f"<p class='pet-name'>{pet['name']}</p>", unsafe_allow_html=True)
                 st.markdown(f"<p class='pet-detail'>Breed: {pet['breed']}</p>", unsafe_allow_html=True)
                 st.markdown(f"<p class='pet-detail'>Age: {pet['age']}</p>", unsafe_allow_html=True)
-
-
 
                 image_path = os.path.join(IMAGE_FOLDER_OTHER if pet.get('type') == "Other" else IMAGE_FOLDER_CATS, pet["image"])
 
@@ -1133,9 +1103,6 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
                     height=50,
                 )
 
-                # --- SHARE BUTTON WITH PROMPT ---
-                # Initialize share_prompt and pet_to_share for each pet if not exists
-                # Using a unique key for each pet's share state
                 share_prompt_key = f'share_prompt_{pet["name"]}'
                 pet_to_share_key = f'pet_to_share_{pet["name"]}'
 
@@ -1145,8 +1112,8 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
                     st.session_state[pet_to_share_key] = None
 
                 if st.button(f"Share {pet['name']}!", key=f"share_animals_{pet['name']}"):
-                    st.session_state[pet_to_share_key] = pet['name'] # store the pet name
-                    st.session_state[share_prompt_key] = not st.session_state[share_prompt_key] # Toggle the prompt
+                    st.session_state[pet_to_share_key] = pet['name']
+                    st.session_state[share_prompt_key] = not st.session_state[share_prompt_key]
 
                 if st.session_state.get(share_prompt_key, False) and st.session_state.get(pet_to_share_key) == pet['name']:
                     st.write(f"Share {pet['name']} on:")
@@ -1156,8 +1123,8 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
                     with col1:
                         if st.button("Facebook", key=f"facebook_share_{pet['name']}"):
                             share_pet(pet['name'])
-                            st.session_state[share_prompt_key] = False # Hide prompt after sharing
-                            st.rerun() # Rerun to update points and clear share prompt
+                            st.session_state[share_prompt_key] = False
+                            st.rerun()
 
                     with col2:
                         if st.button("X/Twitter", key=f"twitter_share_{pet['name']}"):
@@ -1176,21 +1143,15 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
             st.error(f"Error displaying {pet['name']}: {e}")
         pet_index += 1
 
-    # --- Adopted Animals Section (Initially Empty) ---
-    st.header("Adopted Animals") # Section header - initially empty
+    st.header("Adopted Animals")
     st.write("This section will display animals that have already been adopted. (Currently empty)")
-    # --- You can add logic here later to display adopted animals if you have a separate list ---
-    # --- For now, it's just a header and informational text ---
 
-    # --- Find My Forever Home Challenge ---
     st.header("Find My Forever Home Challenge")
 
-    # Initialize leaderboard if not already in session state (should be loaded on login)
     if 'leaderboard' not in st.session_state:
         credentials, leaderboard = load_credentials()
         st.session_state['leaderboard'] = leaderboard
 
-    # --- Leaderboard ---
     st.subheader("Leaderboard (Top Sharers)")
     leaderboard = st.session_state['leaderboard']
     if leaderboard:
@@ -1200,7 +1161,6 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
     else:
         st.write("No shares yet!")
 
-    # --- Feedback section ---
     st.subheader("🌟 Feedback")
 
     with st.form("feedback_form"):
@@ -1208,7 +1168,7 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
         submitted = st.form_submit_button("Submit Feedback")
 
         if submitted:
-            if "FORMSPREE_ENDPOINT" in st.secrets: # Access secret directly from st.secrets
+            if "FORMSPREE_ENDPOINT" in st.secrets:
                 form_endpoint = st.secrets["FORMSPREE_ENDPOINT"]
                 try:
                     response = requests.post(form_endpoint, data={"feedback": feedback_text})
@@ -1221,5 +1181,47 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
             else:
                 st.error("Formspree endpoint not found! Make sure that your secrets.toml is properly updated.")
 
+    # --- START OF NEW CHATBOT UI ---
+    st.header("Peata Chatbot")
+    
+    # Initialize the state variable to track the AI mode.
+    if "is_online" not in st.session_state:
+        st.session_state.is_online = True
 
+    # This dynamic button controls the dual-AI logic.
+    if st.session_state.is_online:
+        button_label = "V"
+        button_color = "#FF69B4" # Hot Pink for online
+        mode_label = "Online"
+        mode_icon = "V"
+    else:
+        button_label = "G"
+        button_color = "#99CCFF" # Light blue for offline
+        mode_label = "Offline"
+        mode_icon = "G"
 
+    # This button toggles the state and reruns the app to apply the change.
+    if st.sidebar.button(f"Switch to {mode_label} AI ({button_label})", key="ai_mode_toggle"):
+        st.session_state.is_online = not st.session_state.is_online
+        st.rerun()
+
+    # Display the current mode status dynamically with the icon.
+    st.sidebar.info(f"AI Mode: **{mode_label}** - {mode_icon}")
+
+    # Display chat messages from history on app rerun
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    # Accept user input
+    if prompt := st.chat_input("What can Peata do for you?"):
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        st.session_state.messages.append({"role": "user", "content": prompt})
+
+        with st.chat_message("assistant"):
+            with st.spinner("Peata is thinking..."):
+                response = get_chatbot_response(prompt)
+                st.markdown(response)
+                
+        st.session_state.messages.append({"role": "assistant", "content": response})
