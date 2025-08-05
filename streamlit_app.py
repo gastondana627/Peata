@@ -10,6 +10,10 @@ import pandas as pd
 import toml
 import streamlit.components.v1 as components
 import requests
+
+import streamlit as st
+hf_token = st.secrets["HF_TOKEN"]
+
 from google.oauth2 import service_account
 from google.cloud import aiplatform
 # --- START OF NEW IMPORTS AND SESSION STATE ---
@@ -171,44 +175,7 @@ if 'vertex_ai_initialized' not in st.session_state:
 # --- END: ADDITION ---
 
 # --- Vertex AI Initialization Block (with MODIFICATIONS) ---
-try:
-    creds_dict = st.secrets["vertex_ai"]
-    credentials_gcp = service_account.Credentials.from_service_account_info(creds_dict)
-    print("✅ GCP credentials loaded successfully.") # Keep this console log
 
-    project_id = creds_dict['project_id']
-    location = creds_dict.get('location', "us-central1")
-
-    @st.cache_resource
-    def initialize_vertex_ai_cached(_creds, proj_id, loc):
-        aiplatform.init(project=proj_id, location=loc, credentials=_creds)
-        print("Vertex AI Initialized (cached)") # Keep this console log
-        return True
-
-    # vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-    # START OF CHANGES: Set session state instead of direct sidebar messages
-    # vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-    if initialize_vertex_ai_cached(credentials_gcp, project_id, location):
-        st.session_state.vertex_ai_initialized = True  # MODIFIED
-        # st.sidebar.success("✅ GCP/Vertex AI initialized.") # REMOVED/COMMENTED OUT
-    else:
-        st.session_state.vertex_ai_initialized = False # MODIFIED
-        # st.sidebar.error("❌ GCP/Vertex AI failed to initialize.") # REMOVED/COMMENTED OUT
-    # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    # END OF CHANGES
-    # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-except Exception as e:
-    print(f"❌ Failed to load GCP credentials or initialize Vertex AI: {e}") # Keep console log
-    # This global st.error is fine if the entire init process fails badly
-    st.error(f"❌ Critical Error: Could not initialize AI services. Some features may be unavailable.")
-    # vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-    # START OF ADDITION: Set session state on exception
-    # vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-    st.session_state.vertex_ai_initialized = False # ADDED
-    # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    # END OF ADDITION
-    # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 import urllib.parse  # Add this line here
 
 # --- IMAGE FOLDERS ---
@@ -1181,47 +1148,43 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
             else:
                 st.error("Formspree endpoint not found! Make sure that your secrets.toml is properly updated.")
 
-    # --- START OF NEW CHATBOT UI ---
     st.header("Peata Chatbot")
     
-    # Initialize the state variable to track the AI mode.
     if "is_online" not in st.session_state:
         st.session_state.is_online = True
 
-    # This dynamic button controls the dual-AI logic.
     if st.session_state.is_online:
         button_label = "V"
-        button_color = "#FF69B4" # Hot Pink for online
+        button_color = "#FF69B4"
         mode_label = "Online"
         mode_icon = "V"
     else:
         button_label = "G"
-        button_color = "#99CCFF" # Light blue for offline
+        button_color = "#99CCFF"
         mode_label = "Offline"
         mode_icon = "G"
 
-    # This button toggles the state and reruns the app to apply the change.
     if st.sidebar.button(f"Switch to {mode_label} AI ({button_label})", key="ai_mode_toggle"):
         st.session_state.is_online = not st.session_state.is_online
         st.rerun()
 
-    # Display the current mode status dynamically with the icon.
     st.sidebar.info(f"AI Mode: **{mode_label}** - {mode_icon}")
 
-    # Display chat messages from history on app rerun
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # Accept user input
     if prompt := st.chat_input("What can Peata do for you?"):
         with st.chat_message("user"):
             st.markdown(prompt)
         st.session_state.messages.append({"role": "user", "content": prompt})
 
         with st.chat_message("assistant"):
-            with st.spinner("Peata is thinking..."):
-                response = get_chatbot_response(prompt)
-                st.markdown(response)
+    # The new function name is get_chatbot_response_stream
+    # st.write_stream handles the word-by-word display
+            response = st.write_stream(get_chatbot_response_stream(prompt))
                 
         st.session_state.messages.append({"role": "assistant", "content": response})
+
+
+

@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "peata-452410",
+  "private_key_id": "c9167ee32dbf69f9d7ccffa46e19f439293430e1",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCbPyMS44oy3kvq\nHIYXmthYdgvNVDlGfpRNL6gtcNvVa7t0y3w9Y39/QjEBioMsR3utSED8dM1otGtH\ni+uS+vAy798s6JSTfJJ/WPjha144rNYjrXda8CwKgYeZRyh/i2vrNI1nkv4y4rvc\nmV1SZy3Al8IN1Ut/GMgqcpgkVtySLolFPHOCUOM/mByNqj4Zk1tm6lKZP4osUOai\nFRcLWxBKSe8HMZtCjYbPUmXMewHakd8Y676Z8ZmNI8DnBCPV0RPMpJLIWkXfYcu0\n6drQOOI9URXy1oMLRKQEZ7zAJYXCD9WIz3DDOtPLYZ3ckTF9ftZMDqatb1WHQCKP\nv3PG96HzAgMBAAECggEAGCVEvj5XkzvR0NKo5Gj39yI9Ca1szxMG285quM6R0mrU\nGAFCDIY6IT/ZQWUaq7teeAAB44IDJKLTAKi5df3DeBiovGJcIWhBnL7ozp6VY/k1\nwQzMwH8USnoE7gkMOnIj0cw1pgNNt/pdv5y20AcuLYMs8lvXRyhCkZ+LHDPKUI3g\nJCweFCQtTUQ773X21Zc2Wnq481jKlWEtH/IYM384COwjgYUdqONukIsqV1mNoGVS\nBBm/u+vn/6hv9qVQ9e2K1JLzKXOSsZrDPQezGON5VzfAJOk0acMfzX5AReawvcUD\nrOauYQlJnpD6Wg2R2ZDLDWBfM5+WkxLftePR0VrpAQKBgQDX258oXm9/Tp2Ma+Ic\nxBFeIlU0iN2kOF7aPaW+wTtmv/rVpgLNklw26ej9S7JPbWtv7Uri1RxSnGHOzGVK\n3I2U+tjrydW9UZ1Qi7Fba1H9KUTn35y3luC6mz5UkairyfSuOA+Ao1II0ntJY1V7\nvt4ka4mNfNUI+o5OGGiFt4NYcwKBgQC4HfxfpyBeTeq8Pfavv7Go1ozxtWve6pVi\nr3Lh6Am5KI5UIgCWO85fJEg1bkbTlG6HpbHKUnErbNDshrwXdFDc35Bv6AVlcCuV\nT6x6DhBnlcQDw61KsIC0bVrKGiuczUpoywbujKq3b64S5ZUfbSM6f/dVUOGSOlSV\nFMYfYeOwgQKBgQCZ2DCuP+gtjuVg8H8eS2upcMTThXyaj4ai+u8Hboccq1VmMkSr\nKVZJ2RqydOHoFC9PfYsy8fqWslhPYIQM//Z0qPgzzQ1mOiXqAzXr1yh/S4uNy2TR\nwFn5Ba497faOQYj/Jnt+DmjoWsN9watqX9XJlU9bJQ5csN79sA3Gx814GwKBgB0X\n/+1Nh3vfbBxa3kRfUj+Px63aMTWEdB6oAstX01GC6xq4VMdoo++81/w5dM+yQNUG\nhdWmuWNXSpxVnhtGshB082n7i/6/fuOVN3gCCO2VaOf/X77RrUTVkuckw4d/mSZ+\nDpZbfA6Ig0VRKgNRR6PS3M6KfVqSBROZuMT0vvoBAoGAEvfCaFmsCqQRGXDyjYA+\n+L/UwlCqp2PxqAbD82Ebs8YV16Z5zilYzM4mW+u78RwDoZEXevA0ElAM0OMLwQbn\nSR8dzjQ5ROaXU6/q88v4UbhmEmAMogugMqa58Ft2TRaF5xiIGBathH2Q9lRcfwzj\nE3rT1Fj3i6Qd6jarB+bMPNA=\n-----END PRIVATE KEY-----\n",
+  "client_email": "peta-vertex-api@peata-452410.iam.gserviceaccount.com",
+  "client_id": "111530906466567844442",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/peta-vertex-api%40peata-452410.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
