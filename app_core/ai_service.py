@@ -32,7 +32,7 @@ def load_gemma_model():
             st.warning("Hugging Face token (HF_TOKEN) not found in secrets.")
             return None
 
-        model_id = "google/gemma-2-2b-it"
+        model_id = "google/gemma-2b-it"
         model = AutoModelForCausalLM.from_pretrained(
             model_id, torch_dtype=torch.bfloat16, token=hf_token
         ).to("cpu")
@@ -41,7 +41,9 @@ def load_gemma_model():
         st.session_state.gemma_model = {"model": model, "tokenizer": tokenizer}
         return st.session_state.gemma_model
     except Exception as e:
-        st.error(f"Error loading Gemma model: {e}")
+        st.error(f"Error loading Gemma model: {e}. "
+                 "This may be due to a missing or invalid Hugging Face token. "
+                 "Please ensure your `HF_TOKEN` is set correctly in your Streamlit secrets.")
         return None
 
 # This is the main function called by your app.
