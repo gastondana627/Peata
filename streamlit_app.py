@@ -7,28 +7,35 @@ import datetime
 import importlib
 import base64
 import pandas as pd
+import io
 import toml
 import streamlit.components.v1 as components
 import requests
-
-import streamlit as st
-hf_token = st.secrets["HF_TOKEN"]
-
 from google.oauth2 import service_account
 from google.cloud import aiplatform
-# --- START OF NEW IMPORTS AND SESSION STATE ---
-from app_core.ai_service import get_chatbot_response
+
+# --- CORRECTED IMPORTS AND INITIALIZATION ---
+from app_core.ai_service import initialize_vertex_ai, get_chatbot_response
+from pet_matcher import find_match, precompute_shelter_image_features, IMAGE_FOLDER_CATS, IMAGE_FOLDER_OTHER
+
+# Initialize the AI Models once on startup to ensure a fast connection
+initialize_vertex_ai()
+# --- END OF CORRECTION ---
 
 # VERIFY PYTHON PATH - KEEP THIS
 print(f"Python Executable used by Streamlit: {sys.executable}")
 
-st.set_page_config(page_title="Animal Shelter", layout="wide", initial_sidebar_state="collapsed")  # MUST come right after importing streamlit
+st.set_page_config(page_title="Animal Shelter", layout="wide", initial_sidebar_state="collapsed")
 
 # Initialize the new session state variables for the chat history and AI mode
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "ai_mode" not in st.session_state:
     st.session_state.ai_mode = "Initializing..."
+if 'username' not in st.session_state:
+    st.session_state['username'] = None
+if "view" not in st.session_state:
+    st.session_state.view = "login"
 # --- END OF NEW IMPORTS ---
 
 print(f"Python Executable used by Streamlit: {sys.executable}")
@@ -1174,17 +1181,38 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    if prompt := st.chat_input("What can Peata do for you?"):
-        with st.chat_message("user"):
-            st.markdown(prompt)
-        st.session_state.messages.append({"role": "user", "content": prompt})
+    
 
-        with st.chat_message("assistant"):
-    # The new function name is get_chatbot_response_stream
-    # st.write_stream handles the word-by-word display
-            response = st.write_stream(get_chatbot_response_stream(prompt))
-                
-        st.session_state.messages.append({"role": "assistant", "content": response})
+        # Import the new, separated functions
+#from app_core.ai_service import initialize_models, get_vertex_response_stream, get_gemma_response
+
+# Call initialize_models at the top of the script
+#initialize_models()
+
+# ... (rest of your streamlit_app.py code) ...
+
+# --- FINAL CHAT LOOP AT THE BOTTOM OF streamlit_app.py ---
+if prompt := st.chat_input("What can Peata do for you?"):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        response = ""
+        response_generator = get_chatbot_response(prompt)
+        
+        if hasattr(response_generator, '__iter__') and not isinstance(response_generator, str):
+            response = st.write_stream(response_generator)
+        else:
+            response = response_generator
+            st.markdown(response)
+            
+    st.session_state.messages.append({"role": "assistant", "content": response})
+
+
+
+
+
 
 
 

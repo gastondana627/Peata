@@ -4,13 +4,11 @@ import streamlit as st
 import vertexai
 from vertexai.generative_models import GenerativeModel
 from google.oauth2 import service_account
-from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
+from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
-from threading import Thread
 
-# --- 1. ONE-TIME INITIALIZATION FOR BOTH AI MODELS ---
-def initialize_models():
-    # Use flags in session state to check if models are already loaded
+# This function initializes the primary online model (Vertex AI).
+def initialize_vertex_ai():
     if "vertex_ai_initialized" not in st.session_state:
         try:
             creds_info = st.secrets["vertex_ai"]
@@ -18,42 +16,36 @@ def initialize_models():
                 project=creds_info["project_id"],
                 credentials=service_account.Credentials.from_service_account_info(creds_info)
             )
-            # Load the Gemini model once and store it in session state
-            st.session_state.vertex_model = GenerativeModel("gemini-1.5-flash")
+            st.session_state.vertex_model = GenerativeModel("gemini-2.0-flash")
             st.session_state.vertex_ai_initialized = True
         except Exception as e:
             st.session_state.vertex_ai_initialized = False
             st.error(f"Vertex AI Initialization Failed: {e}")
+    return st.session_state.get("vertex_ai_initialized", False)
 
-    # The @st.cache_resource decorator handles caching for the Gemma model
-    # We just call the function to ensure it's loaded into the cache.
-    load_gemma_model()
-
-@st.cache_resource(show_spinner="Loading Gemma-2 fallback model...")
+# This function loads the fallback offline model (Gemma) only when needed.
+@st.cache_resource(show_spinner="Loading offline model for the first time...")
 def load_gemma_model():
-    """Loads and caches the Gemma model. Returns a tuple (model, tokenizer)."""
     try:
         hf_token = st.secrets.get("HF_TOKEN")
         if not hf_token:
             st.warning("Hugging Face token (HF_TOKEN) not found in secrets.")
-            return None, None
-        
+            return None
+
         model_id = "google/gemma-2-2b-it"
         model = AutoModelForCausalLM.from_pretrained(
-            model_id,
-            torch_dtype=torch.bfloat16,
-            device_map="auto",
-            token=hf_token
-        )
+            model_id, torch_dtype=torch.bfloat16, token=hf_token
+        ).to("cpu")
         tokenizer = AutoTokenizer.from_pretrained(model_id, token=hf_token)
-        return model, tokenizer
+        
+        st.session_state.gemma_model = {"model": model, "tokenizer": tokenizer}
+        return st.session_state.gemma_model
     except Exception as e:
         st.error(f"Error loading Gemma model: {e}")
-        return None, None
+        return None
 
-# --- 2. THE MAIN STREAMING CHATBOT FUNCTION ---
-def get_chatbot_response_stream(user_prompt):
-    # This is the system prompt to guide the AI's personality
+# This is the main function called by your app.
+def get_chatbot_response(user_prompt):
     system_prompt = """
     You are Peata, a friendly and helpful AI assistant for the Peata Animal Shelter.
     Your purpose is to provide information about animal adoption, shelter services, and how to care for pets.
@@ -62,47 +54,36 @@ def get_chatbot_response_stream(user_prompt):
     """
     full_prompt = f"{system_prompt}\n\nUser: {user_prompt}\nPeata:"
 
-    use_online_model = st.session_state.get("is_online", True)
-    vertex_is_ready = st.session_state.get("vertex_ai_initialized", False)
-
-    # --- ATTEMPT TO USE VERTEX AI (GEMINI) ---
-    if use_online_model and vertex_is_ready:
-        st.session_state.ai_mode = "Online (Vertex AI)"
+    # Try the online model if it's selected and initialized
+    if st.session_state.get("is_online", True) and initialize_vertex_ai():
         try:
-            # Get the model from session state instead of re-creating it
+            st.session_state.ai_mode = "Online (Vertex AI)"
             gemini_model = st.session_state.vertex_model
-            # Use the streaming parameter
             response_stream = gemini_model.generate_content(full_prompt, stream=True)
-            for chunk in response_stream:
-                yield chunk.text
-            return # End the function after successful streaming
+            return (chunk.text for chunk in response_stream)
         except Exception as e:
-            st.warning(f"Vertex AI streaming failed: {e}. Falling back to Gemma 2.")
+            st.warning(f"Online AI failed ({e.__class__.__name__}). Falling back to offline model.")
 
-    # --- FALLBACK TO GEMMA 2 ---
+    # --- FALLBACK LOGIC ---
     st.session_state.ai_mode = "Offline (Gemma 2)"
-    gemma_model, tokenizer = load_gemma_model()
     
-    if gemma_model and tokenizer:
-        try:
-            # Setup for streaming with Transformers
-            streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
-            
-            chat = [{"role": "user", "content": full_prompt}]
-            formatted_prompt = tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
-            inputs = tokenizer(formatted_prompt, return_tensors="pt").to(gemma_model.device)
-            
-            generation_kwargs = dict(inputs, streamer=streamer, max_new_tokens=250)
-            
-            # Run generation in a separate thread for streaming
-            thread = Thread(target=gemma_model.generate, kwargs=generation_kwargs)
-            thread.start()
-            
-            # Yield tokens as they become available
-            for new_text in streamer:
-                yield new_text
-        except Exception as e:
-            st.error(f"Gemma inference error: {e}")
-            yield "My apologies, I encountered an issue with the Gemma model."
-    else:
-        yield "I'm sorry, but both AI models are currently unavailable."
+    # Lazy-load Gemma only if it's not already in memory
+    if "gemma_model" not in st.session_state:
+        load_gemma_model()
+
+    if "gemma_model" in st.session_state and st.session_state.gemma_model:
+        gemma = st.session_state.gemma_model
+        model = gemma["model"]
+        tokenizer = gemma["tokenizer"]
+        
+        inputs = tokenizer(full_prompt, return_tensors="pt").to("cpu")
+        with torch.no_grad():
+            outputs = model.generate(**inputs, max_new_tokens=250)
+        response_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+        
+        model_reply_start = response_text.find("Peata:")
+        if model_reply_start != -1:
+            return response_text[model_reply_start + len("Peata:"):]
+        return response_text
+    
+    return "I'm sorry, but both AI models are currently unavailable."
