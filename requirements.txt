@@ -92,6 +92,7 @@ sympy==1.14.0
 tenacity==8.5.0
 tokenizers==0.21.4
 toml==0.10.2
+turso-client
 torch==2.7.1
 tornado==6.5.1
 tqdm==4.67.1
