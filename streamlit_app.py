@@ -17,10 +17,6 @@ from google.cloud import aiplatform
 # --- CORRECTED IMPORTS AND INITIALIZATION ---
 from app_core.ai_service import initialize_vertex_ai, get_chatbot_response
 from pet_matcher import find_match, precompute_shelter_image_features, IMAGE_FOLDER_CATS, IMAGE_FOLDER_OTHER
-from db_utils import init_db, get_user, create_user, add_report, get_user_history, get_leaderboard
-
-# Initialize the database
-init_db()
 
 # Initialize the AI Models once on startup to ensure a fast connection
 initialize_vertex_ai()
@@ -96,13 +92,6 @@ st.markdown(
         background-color: #ff69b4 !important; /* Hot pink for the button */
         color: white !important;
         border: none !important;
-    }
-
-    /* Styling for the Hackathon Judge Access button */
-    .judge-access-container button {
-        background-color: #FF69B4 !important;
-        color: white !important;
-        border-color: #FF69B4 !important;
     }
 
     /* --- Custom Text Classes (for pet names and details in adoption section) --- */
@@ -203,6 +192,63 @@ import urllib.parse  # Add this line here
 ADOPTION_WEBSITE = "https://www.sa.gov/Directory/Departments/ACS/Adopt/Pet-Search"
 
 
+# --- LOAD DATA (for lost_pets database.json) ---
+def load_data():
+    try:
+        with open("database.json", "r") as f:
+            data = json.load(f)
+        return data
+    except FileNotFoundError:
+        # Create an empty database.json if it doesn't exist
+        initial_data = {"lost_pets": []}
+        with open("database.json", "w") as f:
+            json.dump(initial_data, f, indent=4)
+        return initial_data
+    except json.JSONDecodeError:
+        print("Warning: database.json is empty or malformed. Resetting.")
+        initial_data = {"lost_pets": []}
+        with open("database.json", "w") as f:
+            json.dump(initial_data, f, indent=4)
+        return initial_data
+
+
+def save_data(data):
+    with open("database.json", "w") as f:
+        json.dump(data, indent=4, fp=f)
+
+# --- LOAD CREDENTIALS (reads from credentials.json) ---
+def load_credentials():
+    try:
+        # Load the single credentials.json file
+        with open("credentials.json", "r") as f:
+            data = json.load(f)
+
+        # Separate credentials and leaderboard from the loaded data
+        # All keys in data are user accounts EXCEPT 'leaderboard'
+        credentials = {k: v for k, v in data.items() if k != 'leaderboard'}
+        leaderboard = data.get('leaderboard', {}) # Get leaderboard, or an empty dict if not present
+        return credentials, leaderboard
+    except FileNotFoundError:
+        # If credentials.json doesn't exist, create an empty one and return empty dicts
+        initial_creds = {"leaderboard": {}}
+        with open("credentials.json", "w") as f:
+            json.dump(initial_creds, f, indent=4)
+        return {}, {}
+    except json.JSONDecodeError:
+        # Handle case where file exists but is empty or malformed JSON
+        print("Warning: credentials.json found but is empty or malformed. Starting fresh.")
+        initial_creds = {"leaderboard": {}}
+        with open("credentials.json", "w") as f:
+            json.dump(initial_creds, f, indent=4)
+        return {}, {}
+
+# --- SAVE CREDENTIALS (writes to credentials.json) ---
+def save_credentials(credentials, leaderboard):
+    # Combine credentials (user accounts) and leaderboard into a single dictionary
+    # It's important to put the leaderboard back into the 'data' structure before saving
+    data_to_save = {**credentials, 'leaderboard': leaderboard}
+    with open("credentials.json", "w") as f:
+        json.dump(data_to_save, indent=4, fp=f)
 
 # --- HASH PASSWORD (SIMPLE) ---
 def hash_password(password):
@@ -482,34 +528,14 @@ def login():
 
     st.title("Welcome to the Local Animal Shelter!")
     st.write("Please sign in or create an account.")
-
-    # --- HACKATHON JUDGE ACCESS ---
-    if 'judge_access_dismissed' not in st.session_state:
-        st.session_state.judge_access_dismissed = False
-
-    if not st.session_state.judge_access_dismissed:
-        st.markdown('<div class="judge-access-container">', unsafe_allow_html=True)
-        col1, col2 = st.columns([0.8, 0.2])
-        with col1:
-            if st.button("Click here to auto-fill demo login credentials (admin/judge access)", key="judge_access_button"):
-                st.session_state.login_username_input = "GG"
-                st.session_state.login_password_input = "123"
-                st.rerun()
-        with col2:
-            if st.button("Dismiss", key="dismiss_judge_access"):
-                st.session_state.judge_access_dismissed = True
-                st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-    # --- END HACKATHON JUDGE ACCESS ---
-
     username = st.text_input("Username:", key="login_username_input")
     password = st.text_input("Password:", type="password", key="login_password_input")
 
     if st.button("Sign In", key="login_button"):
-        user = get_user(username)
-        if user and user.iloc[0]['password'] == hash_password(password):
-            st.session_state['username'] = user.iloc[0]['username']
-            st.session_state['user_id'] = user.iloc[0]['id']
+        credentials, leaderboard = load_credentials() # Ensure load_credentials is defined
+        if username in credentials and credentials[username]["password"] == hash_password(password): # Ensure hash_password is defined
+            st.session_state['username'] = username
+            st.session_state['leaderboard'] = leaderboard
             st.success("Logged in successfully!")
             st.session_state.view = "main_app"
             st.rerun()
@@ -662,17 +688,31 @@ def create_account():
     # --- Logic to execute AFTER the form is submitted ---
     # This 'if submitted:' block is now OUTSIDE and AFTER the 'with st.form(...):' block
     if submitted:
-        user = get_user(new_username_form)
+        # Now you use the variables from the form widgets (e.g., new_username_form)
+        credentials, leaderboard = load_credentials() # Ensure load_credentials is defined
+
+        # Basic validation (you can make this more robust)
         if not new_username_form or not new_password_form:
             st.error("Username and Password cannot be empty.")
-        elif not user.empty:
+        elif new_username_form in credentials:
             st.error("Username already exists.")
         else:
-            hashed_password = hash_password(new_password_form)
-            create_user(new_username_form, hashed_password, has_children_form, has_other_pets_form, preferred_size_form, activity_level_form, preferred_pet_form)
+            hashed_password = hash_password(new_password_form) # Ensure hash_password is defined
+            credentials[new_username_form] = {
+                "password": hashed_password,
+                "has_children": has_children_form,
+                "has_other_pets": has_other_pets_form,
+                "preferred_size": preferred_size_form,
+                "activity_level": activity_level_form,
+                "preferred_pet": preferred_pet_form,
+                "share_history": [],
+                "lost_pet_history": [],
+                "found_pet_history": [],
+            }
+            save_credentials(credentials, leaderboard) # Ensure save_credentials is defined
             st.success("Account created successfully! Please log in.")
             st.session_state.view = "login"
-            st.rerun()
+            st.rerun() # Use experimental_rerun to force immediate navigation
     # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     # END OF st.form RESTRUCTURING AND SUBMISSION LOGIC
     # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -685,40 +725,141 @@ def create_account():
 # --- Share Pet Function (Persistence Verified) ---
 def share_pet(pet_name):
     st.info(f"You shared {pet_name}'s profile! +5 Points")
-    user_id = st.session_state.get('user_id')
-    if user_id:
-        add_report(user_id, 'share', 5, pet_name=pet_name)
-        st.success(f"Share for {pet_name} recorded!")
+    username = st.session_state['username']
+    if username:
+        credentials, leaderboard = load_credentials()
+        user_data = credentials.get(username, {})
+        share_history = user_data.get('share_history', [])
+        now = datetime.datetime.now()
+        timestamp_str = now.strftime("%Y-%m-%d %H:%M:%S")
+
+        share_history.append({
+            "pet_name": pet_name,
+            "timestamp": timestamp_str,
+            "points_earned": 5,
+        })
+        credentials[username]['share_history'] = share_history
+        if username not in leaderboard:
+            leaderboard[username] = 0
+        leaderboard[username] += 5
+        st.session_state['leaderboard'] = leaderboard # Update session state leaderboard
+        save_credentials(credentials, leaderboard) # SAVE - Point persistence
+        # Share receipt
+        st.success(f"Share Receipt:")
+        st.write(f"- Pet: {pet_name}")
+        st.write(f"- Date/Time: {timestamp_str}")
+        st.write(f"- Points Earned: 5")
 
 # --- Report Lost Pet Function (Points Added) ---
 def report_lost_pet_points(pet_name, pet_breed):
     st.info(f"You reported a lost pet: {pet_name}! +5 Points")
-    user_id = st.session_state.get('user_id')
-    if user_id:
-        add_report(user_id, 'lost', 5, pet_name=pet_name, pet_breed=pet_breed)
-        st.success(f"Lost pet report for {pet_name} recorded!")
+    username = st.session_state['username']
+    if username:
+        credentials, leaderboard = load_credentials()
+        user_data = credentials.get(username, {})
+        lost_pet_history = user_data.get('lost_pet_history', [])
+
+        now = datetime.datetime.now()
+        timestamp_str = now.strftime("%Y-%m-%d %H:%M:%S")
+
+        lost_pet_history.append({
+            "pet_name": pet_name,
+            "pet_breed": pet_breed,
+            "timestamp": timestamp_str,
+            "points_earned": 5,
+        })
+        credentials[username]['lost_pet_history'] = lost_pet_history
+
+        if username not in leaderboard:
+            leaderboard[username] = 0
+        leaderboard[username] += 5
+        st.session_state['leaderboard'] = leaderboard # Update session state leaderboard
+
+        save_credentials(credentials, leaderboard) # SAVE - Point persistence
+
+        # Report receipt
+        st.success(f"Lost Pet Reported Successfully!") # Updated success message
+        st.write(f"Lost Pet Report Receipt:")
+        st.write(f"- Pet Name: {pet_name}")
+        st.write(f"- Pet Breed: {pet_breed}")
+        st.write(f"- Date/Time: {timestamp_str}")
+        st.write(f"- Points Earned: 5")
+    return # Added return to stop further execution in button click
 
 # --- Report Found Pet Function (Points Added) ---
 def report_found_pet_points():
+    st.header("Lost Pet Reunification Hub")
+    st.markdown(
+        """
+        This hub helps reunite lost pets with their owners.
+        **Report a found pet:** Upload a photo. AI matching will attempt to find the owner. Earn points for reporting!
+        **Report a lost pet:** Fill the form below with pet info and photo. Earn points for reporting! We'll notify you of matches.
+        """
+    )
+
+
     st.info(f"You reported a found pet! +5 Points")
-    user_id = st.session_state.get('user_id')
-    if user_id:
-        add_report(user_id, 'found', 5)
-        st.success("Found pet report recorded!")
+    username = st.session_state['username']
+    if username:
+        credentials, leaderboard = load_credentials()
+        user_data = credentials.get(username, {})
+        found_pet_history = user_data.get('found_pet_history', []) # Get found pet history
+
+        now = datetime.datetime.now()
+        timestamp_str = now.strftime("%Y-%m-%d %H:%M:%S")
+
+        found_pet_history.append({ # Save to found pet history
+            "timestamp": timestamp_str,
+            "points_earned": 5,
+        })
+        credentials[username]['found_pet_history'] = found_pet_history # Update credentials
+
+        if username not in leaderboard:
+            leaderboard[username] = 0
+        leaderboard[username] += 5
+        st.session_state['leaderboard'] = leaderboard # Update session state leaderboard
+
+        save_credentials(credentials, leaderboard) # SAVE - Point persistence
+
+        # Report receipt
+        st.success(f"Found Pet Reported Successfully!") # Updated success message
+        st.write(f"Found Pet Report Receipt:")
+        st.write(f"- Date/Time: {timestamp_str}")
+        st.write(f"- Points Earned: 5")
+    return # Added return to stop further execution in button click
 
 
 # --- Display User History Function ---
 def display_user_history():
-    user_id = st.session_state.get('user_id')
-    if user_id:
-        history_df = get_user_history(user_id)
-        total_points = history_df['points_earned'].sum() if not history_df.empty else 0
-        st.sidebar.header(f"Your History, {st.session_state['username']}")
+    username = st.session_state['username']
+    if username:
+        credentials, leaderboard = load_credentials()
+        user_data = credentials.get(username, {})
+        share_history = user_data.get('share_history', [])
+        lost_pet_history = user_data.get('lost_pet_history', []) # Retrieve lost pet history
+        found_pet_history = user_data.get('found_pet_history', []) # Retrieve found pet history
+        total_points = st.session_state['leaderboard'].get(username, 0)
+
+        st.sidebar.header(f"Your History, {username}")
         st.sidebar.subheader(f"Total Points: {total_points}")
-        if not history_df.empty:
-            st.sidebar.dataframe(history_df)
+
+        if share_history:
+            st.sidebar.write("---")
+            st.sidebar.subheader("Share Log:")
+            df_share = pd.DataFrame(share_history)
+            st.sidebar.dataframe(df_share)
+        if lost_pet_history: # Display lost pet history if available
+            st.sidebar.write("---")
+            st.sidebar.subheader("Lost Pet Reports:")
+            df_lost_pet = pd.DataFrame(lost_pet_history)
+            st.sidebar.dataframe(df_lost_pet)
+        if found_pet_history: # Display found pet history if available
+            st.sidebar.write("---")
+            st.sidebar.subheader("Found Pet Reports:")
+            df_found_pet = pd.DataFrame(found_pet_history)
+            st.sidebar.dataframe(df_found_pet)
         else:
-            st.sidebar.write("No activity yet.")
+            st.sidebar.write("No shares or pet reports yet.")
     else:
         st.sidebar.info("Please log in to see your history.")
 
@@ -764,17 +905,6 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
     st.title("Welcome to the Local Animal Shelter!")
     st.write("Here you can meet some of the animals available for adoption.")
     st.header(f"Welcome, {st.session_state['username']}! 🐾")
-
-    # --- Pre-load Gemma model in the background after login ---
-    if "gemma_model" not in st.session_state:
-        from app_core.ai_service import load_gemma_model
-        load_gemma_model()
-
-    # After attempting to load, check if it was successful and display a warning if not
-    if "gemma_model" in st.session_state and st.session_state.gemma_model is None:
-        st.warning("Could not load the offline AI model (Gemma). "
-                   "This is likely due to a missing or invalid `HF_TOKEN` in the app secrets. "
-                   "The chatbot will remain in Online-only mode.", icon="🤖")
 
     # Button to display user history in the sidebar
     display_user_history_button = st.sidebar.button("My History & Points", key="display_history_button")
@@ -897,8 +1027,16 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
     if st.button("Report Lost Pet", key="report_lost_pet_button"):
         if not lost_pet_name or not lost_pet_breed:
             st.error("Please provide the pet's name and breed.")
+        elif lost_pet_image is None:
+            st.error("Please upload an image of the lost pet to submit the report.")
         else:
-            # The image upload is not saved in this version, but the report is.
+            data = load_data()
+            data["lost_pets"].append({
+                "name": lost_pet_name,
+                "breed": lost_pet_breed,
+                "image": lost_pet_image.name,
+            })
+            save_data(data)
             report_lost_pet_points(lost_pet_name, lost_pet_breed)
             st.rerun()
 
@@ -984,10 +1122,16 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
 
     st.header("Find My Forever Home Challenge")
 
+    if 'leaderboard' not in st.session_state:
+        credentials, leaderboard = load_credentials()
+        st.session_state['leaderboard'] = leaderboard
+
     st.subheader("Leaderboard (Top Sharers)")
-    leaderboard_df = get_leaderboard()
-    if not leaderboard_df.empty:
-        st.dataframe(leaderboard_df)
+    leaderboard = st.session_state['leaderboard']
+    if leaderboard:
+        sorted_leaderboard = sorted(leaderboard.items(), key=lambda item: item[1], reverse=True)
+        for rank, (user, points) in enumerate(sorted_leaderboard, start=1):
+            st.write(f"{rank}. {user}: {points} points")
     else:
         st.write("No shares yet!")
 
