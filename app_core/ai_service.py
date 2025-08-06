@@ -26,21 +26,32 @@ def initialize_vertex_ai():
 # This function loads the fallback offline model (Gemma) only when needed.
 @st.cache_resource(show_spinner="Loading offline model for the first time...")
 def load_gemma_model():
+    print("AI_SERVICE: Entered `load_gemma_model` function.")
     try:
         hf_token = st.secrets.get("HF_TOKEN")
         if not hf_token:
+            print("AI_SERVICE: HF_TOKEN not found in secrets.")
             st.warning("Hugging Face token (HF_TOKEN) not found in secrets.")
             return None
 
+        print("AI_SERVICE: HF_TOKEN found. Proceeding to load model.")
         model_id = "google/gemma-2-2b-it"
+
+        print(f"AI_SERVICE: Attempting to download and load tokenizer for '{model_id}'...")
+        tokenizer = AutoTokenizer.from_pretrained(model_id, token=hf_token)
+        print("AI_SERVICE: Tokenizer loaded successfully.")
+
+        print(f"AI_SERVICE: Attempting to download and load model for '{model_id}'...")
         model = AutoModelForCausalLM.from_pretrained(
             model_id, torch_dtype=torch.bfloat16, token=hf_token
         ).to("cpu")
-        tokenizer = AutoTokenizer.from_pretrained(model_id, token=hf_token)
+        print("AI_SERVICE: Model loaded successfully and moved to CPU.")
         
         st.session_state.gemma_model = {"model": model, "tokenizer": tokenizer}
+        print("AI_SERVICE: Gemma model and tokenizer stored in session state.")
         return st.session_state.gemma_model
     except Exception as e:
+        print(f"AI_SERVICE: An exception occurred while loading Gemma: {e}")
         st.error(f"Error loading Gemma model: {e}")
         return None
 
@@ -67,10 +78,8 @@ def get_chatbot_response(user_prompt):
     # --- FALLBACK LOGIC ---
     st.session_state.ai_mode = "Offline (Gemma 2)"
     
-    # Lazy-load Gemma only if it's not already in memory
-    if "gemma_model" not in st.session_state:
-        load_gemma_model()
-
+    # Gemma is now loaded on-demand from the UI.
+    # We just check if it's available in the session state.
     if "gemma_model" in st.session_state and st.session_state.gemma_model:
         gemma = st.session_state.gemma_model
         model = gemma["model"]

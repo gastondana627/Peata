@@ -15,11 +15,13 @@ from google.oauth2 import service_account
 from google.cloud import aiplatform
 
 # --- CORRECTED IMPORTS AND INITIALIZATION ---
-from app_core.ai_service import initialize_vertex_ai, get_chatbot_response
+from app_core.ai_service import initialize_vertex_ai, get_chatbot_response, load_gemma_model
 from pet_matcher import find_match, precompute_shelter_image_features, IMAGE_FOLDER_CATS, IMAGE_FOLDER_OTHER
 
 # Initialize the AI Models once on startup to ensure a fast connection
+print("Attempting to initialize Vertex AI...")
 initialize_vertex_ai()
+print("Vertex AI initialization process finished.")
 # --- END OF CORRECTION ---
 
 # VERIFY PYTHON PATH - KEEP THIS
@@ -1176,6 +1178,19 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
         st.rerun()
 
     st.sidebar.info(f"AI Mode: **{mode_label}** - {mode_icon}")
+
+    # Add a button to manually load the Gemma model
+    if not st.session_state.is_online:
+        if "gemma_model" not in st.session_state or st.session_state.gemma_model is None:
+            st.sidebar.warning("Offline model is not loaded.")
+            if st.sidebar.button("Load Offline Model"):
+                with st.spinner("Loading Gemma... This may take a moment."):
+                    print("UI: User clicked 'Load Offline Model'.")
+                    load_gemma_model()
+                    print("UI: `load_gemma_model` function finished.")
+                st.rerun()
+        else:
+            st.sidebar.success("Offline model is loaded and ready.")
 
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
