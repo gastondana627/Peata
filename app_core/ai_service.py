@@ -56,15 +56,19 @@ def get_chatbot_response(user_prompt):
     """
     full_prompt = f"{system_prompt}\n\nUser: {user_prompt}\nPeata:"
 
-    # Try the online model if it's selected and initialized
-    if st.session_state.get("is_online", True) and initialize_vertex_ai():
-        try:
-            st.session_state.ai_mode = "Online (Vertex AI)"
-            gemini_model = st.session_state.vertex_model
-            response_stream = gemini_model.generate_content(full_prompt, stream=True)
-            return (chunk.text for chunk in response_stream)
-        except Exception as e:
-            st.warning(f"Online AI failed ({e.__class__.__name__}). Falling back to offline model.")
+    # Try the online model if it's selected
+    if st.session_state.get("is_online", True):
+        # Only initialize Vertex AI if we are in online mode
+        if initialize_vertex_ai():
+            try:
+                st.session_state.ai_mode = "Online (Vertex AI)"
+                gemini_model = st.session_state.vertex_model
+                response_stream = gemini_model.generate_content(full_prompt, stream=True)
+                return (chunk.text for chunk in response_stream)
+            except Exception as e:
+                st.warning(f"Online AI failed ({e.__class__.__name__}). Falling back to offline model.")
+        else:
+            st.warning("Could not initialize online AI. Falling back to offline model.")
 
     # --- FALLBACK LOGIC ---
     st.session_state.ai_mode = "Offline (Gemma 2)"
