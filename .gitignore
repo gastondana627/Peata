@@ -28,6 +28,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Credentials
+credentials.json
+
 # C extensions
 *.so
 

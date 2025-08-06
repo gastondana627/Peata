@@ -32,7 +32,7 @@ def load_gemma_model():
             st.warning("Hugging Face token (HF_TOKEN) not found in secrets.")
             return None
 
-        model_id = "google/gemma-2b-it"
+        model_id = "google/gemma-2-2b-it"
         model = AutoModelForCausalLM.from_pretrained(
             model_id, torch_dtype=torch.bfloat16, token=hf_token
         ).to("cpu")
@@ -41,9 +41,7 @@ def load_gemma_model():
         st.session_state.gemma_model = {"model": model, "tokenizer": tokenizer}
         return st.session_state.gemma_model
     except Exception as e:
-        st.error(f"Error loading Gemma model: {e}. "
-                 "This may be due to a missing or invalid Hugging Face token. "
-                 "Please ensure your `HF_TOKEN` is set correctly in your Streamlit secrets.")
+        st.error(f"Error loading Gemma model: {e}")
         return None
 
 # This is the main function called by your app.
@@ -56,19 +54,15 @@ def get_chatbot_response(user_prompt):
     """
     full_prompt = f"{system_prompt}\n\nUser: {user_prompt}\nPeata:"
 
-    # Try the online model if it's selected
-    if st.session_state.get("is_online", True):
-        # Only initialize Vertex AI if we are in online mode
-        if initialize_vertex_ai():
-            try:
-                st.session_state.ai_mode = "Online (Vertex AI)"
-                gemini_model = st.session_state.vertex_model
-                response_stream = gemini_model.generate_content(full_prompt, stream=True)
-                return (chunk.text for chunk in response_stream)
-            except Exception as e:
-                st.warning(f"Online AI failed ({e.__class__.__name__}). Falling back to offline model.")
-        else:
-            st.warning("Could not initialize online AI. Falling back to offline model.")
+    # Try the online model if it's selected and initialized
+    if st.session_state.get("is_online", True) and initialize_vertex_ai():
+        try:
+            st.session_state.ai_mode = "Online (Vertex AI)"
+            gemini_model = st.session_state.vertex_model
+            response_stream = gemini_model.generate_content(full_prompt, stream=True)
+            return (chunk.text for chunk in response_stream)
+        except Exception as e:
+            st.warning(f"Online AI failed ({e.__class__.__name__}). Falling back to offline model.")
 
     # --- FALLBACK LOGIC ---
     st.session_state.ai_mode = "Offline (Gemma 2)"

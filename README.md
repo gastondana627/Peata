@@ -1,117 +1,151 @@
-# Peata: The AI-Powered Rescue & Reunite Hub
-### *A Submission for the Gemma 3n Hackathon*
+Peata: The Rescue & Reunite Hub
+🐾 Project Overview
+Every year, millions of beloved pets go missing, causing immense distress to their families and overwhelming animal shelters. Peata is a community-focused web application that leverages AI-powered image matching to rapidly connect found pets with their worried owners and to help shelter animals find loving forever homes. By simply uploading a photo, users can tap into a smart system that significantly increases the chances of a happy reunion or a new beginning.
 
-**Public Project Link**: [https://peata-sao.streamlit.app/](https://peata-sao.streamlit.app/)
-**Video Demo Link**: [To be added]
+💡 Problem Statement
+The separation of a pet from its owner is a deeply emotional and stressful event. Traditional methods of finding lost pets—flyers, social media posts, and shelter visits—can be time-consuming, fragmented, and often rely on luck. Animal shelters, while doing incredible work, face challenges in quickly identifying found animals, managing intake, and promoting adoptions effectively. There's a need for a centralized, intelligent platform that can bridge these gaps and utilize technology to expedite the reunification and adoption processes.
 
----
+✨ Solution: How Peata Solves It
+Peata offers a user-friendly, centralized platform where the community and shelters can collaborate:
 
-## 1. The Problem: A Community Disconnected
+For Lost Pets: Owners can quickly create detailed reports for their missing pets, including photos and descriptions.
 
-Every year, millions of pets go missing, leaving families distraught and animal shelters overwhelmed. The traditional methods for recovery—paper flyers, fragmented social media posts, and desperate shelter visits—are inefficient and rely heavily on luck. This disconnection costs precious time, prolonging the suffering of both pets and their owners. Peata was built to bridge this gap with an intelligent, centralized, and community-driven solution.
+For Found Pets: Individuals who find a lost animal can upload its photo. Peata's AI matching engine then compares this photo against the database of reported lost pets and known shelter animals, looking for potential matches based on visual features.
 
-## 2. The Solution: An AI-Powered Hub for Hope
+For Adoptions: Peata showcases animals currently in shelters that are available for adoption, providing key details and images to help them find new homes.
 
-Peata is a web application that serves as a central hub for pet reunification and adoption. It leverages a powerful dual-AI system to intelligently connect lost pets with their owners and help shelter animals find new homes.
+Community Engagement: A points and leaderboard system encourages active participation in reporting pets, sharing profiles, and contributing to the platform's success.
 
--   **AI Image Matching**: Found a pet? Upload its photo, and Peata's two-stage AI matching engine gets to work, comparing it against a database of lost and shelter animals to find a potential match.
--   **Dual AI Chatbot**: Get answers and assistance from Peata's versatile chatbot, which can operate in two modes:
-    -   **Online Mode**: Powered by **Vertex AI (Gemini 2.0 Flash)** for fast, comprehensive responses.
-    -   **Offline Mode**: Powered by **Gemma 2B-IT**, ensuring the app's core chat functionality is always available, even without an internet connection.
--   **Community-Driven Platform**: Users can create accounts, report lost pets, view found animals, and earn points for participating, creating a gamified and engaging experience that encourages community involvement.
+The core innovation lies in the application of image recognition technology (Perceptual Hashing and ORB feature matching) to provide a more efficient and potentially faster way to identify animals than relying solely on manual description matching.
 
----
-## 3. Key Features
+🌟 Key Features
+User Authentication: Secure login and account creation for users.
 
--   **Secure User Authentication**: Users can sign up and log in to a persistent account to track their activity and points.
--   **Lost & Found Pet Reporting**: Simple forms allow users to report a pet they have lost or one they have found, including uploading photos.
--   **AI-Powered Image Matching**: When a pet is reported as found, the system automatically runs a two-stage image analysis to find potential matches from the shelter and lost pet database.
--   **Dual-Mode AI Chatbot**: A helpful chatbot, powered by Vertex AI online and Gemma 2B-IT offline, is available to answer user questions.
--   **Gamified Community Hub**:
-    -   **Points System**: Users earn points for reporting pets and sharing profiles on social media.
-    -   **Leaderboard**: A public leaderboard showcases the most active and helpful community members.
--   **Adoptable Animals Showcase**: A browsable, paginated gallery of all animals currently available for adoption at the shelter.
--   **User Profile & History**: A dedicated page where users can see their total points and a log of their reporting and sharing activities.
+AI-Powered Image Matching: Users can upload an image of a found pet. The system uses a two-stage process (Perceptual Hashing for a quick similarity check and ORB feature matching with homography for more robust verification) to compare the uploaded image against a precomputed database of known shelter animal images, presenting potential matches to the user for confirmation.
 
----
+Lost Pet Reporting: Users can submit detailed reports for pets they have lost, including name, breed, and photos.
 
-## 4. App Architecture
+Found Pet Reporting: Users can report pets they have found, initiating the AI matching process and earning points.
 
-Peata is designed with a modular and scalable architecture, primarily built around a Streamlit frontend that communicates with distinct AI and data management services.
+Adoptable Animals Showcase: Displays a browsable list of animals currently available for adoption, with images, names, breeds, and ages. Users can click through to an external adoption website.
 
-```
-+--------------------------------+
-|      Streamlit Frontend        |
-|      (streamlit_app.py)        |
-+--------------------------------+
-|  |                           |
-|  v                           v
-+-----------------+     +----------------------+
-|  User & Data    |     |   AI Services        |
-|  Management     |     | (app_core/ai_service.py|
-+-----------------+     +----------------------+
-| - credentials.json  |     | - Vertex AI (Online) |
-| - database.json     |     | - Gemma 2B-IT (Offline)|
-+-----------------+     +----------------------+
-|                                |
-|                                v
-|                      +----------------------+
-|                      |  Image Matching      |
-|                      |   (pet_matcher.py)   |
-|                      +----------------------+
-|                      | - pHash (Fast Scan)  |
-|                      | - ORB (Deep Scan)    |
-|                      +----------------------+
-```
+Points & Leaderboard System: Users earn points for activities like sharing pet profiles (via simulated social media buttons), reporting lost pets, and confirming found pet matches. A leaderboard displays top contributors.
 
-1.  **Streamlit Frontend (`streamlit_app.py`):** This is the single source of truth for the user interface. It handles user authentication, page views, and orchestrates calls to the other services.
-2.  **User & Data Management:** Simple JSON files (`credentials.json`, `database.json`) act as a lightweight database for storing user accounts, lost pet reports, and the community leaderboard. This was chosen for rapid prototyping.
-3.  **AI Services (`app_core/ai_service.py`):** This module contains all the logic for the chatbot. It is responsible for initializing the AI models and handling the fallback logic between the online and offline modes.
-4.  **Image Matching (`pet_matcher.py`):** This specialized module handles the heavy lifting of image recognition. It pre-computes features for all shelter animals at startup and runs the two-stage matching algorithm when a user uploads a photo of a found pet.
+User Profile & History: Users can view their accumulated points and a log of their sharing and reporting activities.
 
----
+Responsive UI: Custom-styled interface with attention to user experience, including responsive videos on login/signup and a sticky logo for branding in the main app.
 
-## 4. Specific Use of Gemma 2B-IT
+Feedback Mechanism: Integrated Formspree form for users to submit feedback.
 
-The integration of Gemma is a cornerstone of Peata's resilience, providing a robust fallback to ensure the chatbot is always available to the user.
+GCP Vertex AI Integration (Initialized): Foundational setup for potential future expansion with more advanced cloud AI services.
 
--   **Model Used**: We are using `google/gemma-2b-it`, a powerful yet efficient instruction-tuned model that is well-suited for a helpful assistant role. Its balance of performance and size makes it feasible to run on a local CPU.
+🛠️ Technology Stack
+Backend & Frontend: Python with Streamlit
 
--   **Loading and Invocation**:
-    1.  **Loading**: The model is loaded from Hugging Face using the `transformers` library. To optimize the user experience, we implemented a **pre-loading strategy**. The `load_gemma_model` function is decorated with Streamlit's `@st.cache_resource`, which downloads the model and caches it on disk. This function is called immediately after a user logs in, so the multi-gigabyte download and initial load happen in the background while the user explores the app.
-    2.  **Invocation**: When the user switches to "Offline Mode," the `get_chatbot_response` function routes the prompt to the already-loaded Gemma model. The model generates a response using a standard `model.generate()` call.
+Image Processing & AI Matching:
 
--   **Fallback Logic**: The application is designed to be "online-first."
-    1.  The app first checks if it is in "Online Mode."
-    2.  If yes, it attempts to connect to Vertex AI. If this connection succeeds, it uses the Gemini model.
-    3.  If the app is in "Offline Mode," OR if the online connection fails for any reason (e.g., no internet, API error), the application seamlessly **falls back** to using the local Gemma model. This ensures maximum uptime for the core chatbot feature.
+OpenCV (cv2): For image manipulation, ORB feature detection and description.
 
----
+imagehash: For Perceptual Hashing (pHash).
 
-## 5. Tech Stack Reasoning
+Pillow (PIL): For image loading and resizing.
 
-Every technology in Peata was chosen for a specific purpose, balancing rapid development with powerful features.
+NumPy: For numerical operations, especially with image data.
 
--   **Python & Streamlit**: Chosen for its speed of development. Streamlit allows for the creation of beautiful, interactive data and AI applications with pure Python, which was perfect for a hackathon timeline.
--   **Gemma 2B-IT**: The ideal choice for the offline model. It is powerful enough to provide genuinely helpful responses while being small enough to feasibly run on a user's local machine or a standard cloud container CPU, which is critical for a public-facing application.
--   **Vertex AI (Gemini 2.0 Flash)**: Used as the primary online model to provide the best possible performance and response quality without taxing the user's or the server's local resources.
--   **OpenCV & ImageHash**: This two-stage approach to image matching is highly efficient. `imagehash` provides a near-instantaneous way to find potential matches, while OpenCV's ORB feature detection provides a much more robust (but slower) deep scan, giving us the best of both worlds.
--   **JSON Database**: For a prototype, a full-fledged database would be overkill. Using simple JSON files allowed for rapid implementation of user accounts and data persistence without the overhead of database management.
+Data Storage (Prototype Level): JSON files (credentials.json, database.json) for user credentials, leaderboard, and lost pet reports.
 
----
+Styling: Custom CSS injected via Streamlit's st.markdown(unsafe_allow_html=True).
 
-## 6. Challenges Overcome
+Image & Media Handling: Base64 encoding for embedding local videos (login/signup animation) and the sticky SVG logo directly in HTML.
 
-Development was not without its challenges. Here are some of the key hurdles and how they were solved:
+Version Control: Git & GitHub.
 
--   **Challenge: Slow Offline Model Loading.** The Gemma 2B-IT model is over 5 GB, and the initial download and loading process took several minutes, creating a terrible user experience.
-    -   **Solution:** We implemented a **pre-loading and caching** strategy. By calling the cached `load_gemma_model` function immediately after user login, the long wait happens in the background. By the time the user wants to use the offline chatbot, it's already in memory and ready to go.
+Deployment (Cloud): Streamlit Community Cloud.
 
--   **Challenge: Offline Mode Crashing Without Internet.** An early version of the app would crash if the internet was disconnected, even when in offline mode.
-    -   **Solution:** We diagnosed a logic flaw where the app was attempting to initialize the online Vertex AI service regardless of the mode. We refactored the logic to be truly conditional, ensuring that the app **only** attempts to connect to online services when it is explicitly in "Online Mode." This made the offline feature truly robust.
+Secrets Management: Streamlit Secrets (secrets.toml).
 
--   **Challenge: Accurate Image Matching with Varied Photos.** Pets in photos can be in different poses, lighting conditions, and distances from the camera.
-    -   **Solution:** We implemented a two-stage matching system. The initial fast pHash scan handles the easy matches, and the more powerful ORB feature detection provides a deep-scan fallback. This allows the system to be both fast and accurate, correctly identifying pets even in challenging photos.
+Form Handling (Feedback): Formspree.
 
--   **Challenge: Securing Credentials.** The app requires API keys for both Hugging Face and Google Cloud.
-    -   **Solution:** We used Streamlit's built-in Secrets Management (`secrets.toml`), ensuring that no sensitive keys were ever hardcoded into the source code, following security best practices.
+Cloud AI (Initialization): Google Cloud Platform (GCP) Vertex AI SDK (initialized, for future use).
+
+🚀 How to Run/Setup (Briefly, for local development understanding)
+Clone the Repository: git clone https://github.com/gastondana627/Peata
+
+Navigate to Directory: cd Peata
+
+Create & Activate Virtual Environment (Recommended):
+
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+Install Dependencies:
+
+pip install -r requirements.txt
+
+(Ensure requirements.txt includes all necessary packages like streamlit, opencv-python, imagehash, Pillow, numpy, pandas, toml, requests, google-cloud-aiplatform, google-auth-oauthlib.)
+
+Setup secrets.toml: Create a .streamlit/secrets.toml file with necessary API keys/credentials (e.g., for GCP Vertex AI, Formspree).
+
+# .streamlit/secrets.toml
+FORMSPREE_ENDPOINT = "YOUR_FORMSPREE_ENDPOINT_HERE"
+
+[vertex_ai]
+type = "service_account"
+project_id = "YOUR_GCP_PROJECT_ID"
+# ... other service account details ...
+
+Ensure Image Folders Exist: Create the assets/, img/Cats_Q1_2025/, img/Cats_Q2_2025/, and img/other/ directories and populate them with relevant images if they are not part of the repo, or ensure your code points to the correct image paths committed in the repo.
+
+Run the Streamlit App:
+
+streamlit run streamlit_app.py
+
+🌐 Live Application Link
+https://peata-sao.streamlit.app/
+
+🏆 Accomplishments/What Was Built
+As a solo developer, I successfully designed and built a comprehensive prototype for "Peata," an AI-enhanced platform for pet reunification and adoption. This involved:
+
+Developing a full user authentication system (signup/login).
+
+Implementing a two-stage AI image matching engine from scratch using Perceptual Hashing and ORB feature detection for identifying found pets against a shelter database.
+
+Creating a system for users to report lost and found pets.
+
+Building a browsable showcase for adoptable animals.
+
+Integrating a gamification aspect with a points and leaderboard system to encourage community participation.
+
+Designing and implementing a multi-view user interface with custom styling, responsive elements (like videos on auth pages), and a persistent brand logo.
+
+Setting up data persistence for user accounts, pet reports, and leaderboard data using JSON files.
+
+Successfully deploying the application to Streamlit Community Cloud.
+
+Initiating the integration with Google Cloud Vertex AI for future scalability.
+
+📈 Future Plans
+Database Migration: Transition from JSON files to a more robust and scalable database solution (e.g., SQLite for simplicity, or a cloud database like Firestore/PostgreSQL for larger scale).
+
+Enhanced AI Matching:
+
+Explore more advanced deep learning models for image recognition to improve accuracy and robustness.
+
+Train custom models on specific animal breeds or features.
+
+Incorporate other metadata (breed, color, location) into the matching algorithm.
+
+Direct Shelter Integration: Develop APIs or systems for shelters to directly manage their list of adoptable animals and receive notifications for potential matches of found pets.
+
+Geolocation Features: Allow users to specify location for lost/found pets and filter searches by proximity.
+
+Mobile Responsiveness & PWA: Further improve mobile usability and explore Progressive Web App (PWA) features for better offline access or app-like experience.
+
+Expanded Community Features: Notifications for users when a pet matching their lost report is found, user-to-user messaging (with privacy considerations).
+
+Full Vertex AI Utilization: Leverage Vertex AI for model training, deployment, and potentially other MLOps capabilities.
+
+✍️ Author
+Built by: Gaston Dana
+
+This project was developed as a solo effort.

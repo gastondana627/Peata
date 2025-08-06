@@ -15,7 +15,7 @@ from google.oauth2 import service_account
 from google.cloud import aiplatform
 
 # --- CORRECTED IMPORTS AND INITIALIZATION ---
-from app_core.ai_service import initialize_vertex_ai, get_chatbot_response, load_gemma_model
+from app_core.ai_service import initialize_vertex_ai, get_chatbot_response
 from pet_matcher import find_match, precompute_shelter_image_features, IMAGE_FOLDER_CATS, IMAGE_FOLDER_OTHER
 
 # Initialize the AI Models once on startup to ensure a fast connection
@@ -92,6 +92,13 @@ st.markdown(
         background-color: #ff69b4 !important; /* Hot pink for the button */
         color: white !important;
         border: none !important;
+    }
+
+    /* Styling for the Hackathon Judge Access button */
+    .judge-access-container button {
+        background-color: #FF69B4 !important;
+        color: white !important;
+        border-color: #FF69B4 !important;
     }
 
     /* --- Custom Text Classes (for pet names and details in adoption section) --- */
@@ -528,6 +535,26 @@ def login():
 
     st.title("Welcome to the Local Animal Shelter!")
     st.write("Please sign in or create an account.")
+
+    # --- HACKATHON JUDGE ACCESS ---
+    if 'judge_access_dismissed' not in st.session_state:
+        st.session_state.judge_access_dismissed = False
+
+    if not st.session_state.judge_access_dismissed:
+        st.markdown('<div class="judge-access-container">', unsafe_allow_html=True)
+        col1, col2 = st.columns([0.8, 0.2])
+        with col1:
+            if st.button("Click here to auto-fill demo login credentials (admin/judge access)", key="judge_access_button"):
+                st.session_state.login_username_input = "GG"
+                st.session_state.login_password_input = "123"
+                st.rerun()
+        with col2:
+            if st.button("Dismiss", key="dismiss_judge_access"):
+                st.session_state.judge_access_dismissed = True
+                st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+    # --- END HACKATHON JUDGE ACCESS ---
+
     username = st.text_input("Username:", key="login_username_input")
     password = st.text_input("Password:", type="password", key="login_password_input")
 
@@ -905,9 +932,6 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
     st.title("Welcome to the Local Animal Shelter!")
     st.write("Here you can meet some of the animals available for adoption.")
     st.header(f"Welcome, {st.session_state['username']}! 🐾")
-
-    # --- Pre-load Gemma model in the background after login ---
-    load_gemma_model()
 
     # Button to display user history in the sidebar
     display_user_history_button = st.sidebar.button("My History & Points", key="display_history_button")
