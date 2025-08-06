@@ -94,6 +94,13 @@ st.markdown(
         border: none !important;
     }
 
+    /* Styling for the Hackathon Judge Access button */
+    button[data-testid="stButton"] {
+        background-color: #FF69B4 !important;
+        color: white !important;
+        border-color: #FF69B4 !important;
+    }
+
     /* --- Custom Text Classes (for pet names and details in adoption section) --- */
     .pet-name {
         color: #FF69B4 !important; /* Hot pink for pet names */
@@ -528,6 +535,24 @@ def login():
 
     st.title("Welcome to the Local Animal Shelter!")
     st.write("Please sign in or create an account.")
+
+    # --- HACKATHON JUDGE ACCESS ---
+    if 'judge_access_dismissed' not in st.session_state:
+        st.session_state.judge_access_dismissed = False
+
+    if not st.session_state.judge_access_dismissed:
+        col1, col2 = st.columns([0.8, 0.2])
+        with col1:
+            if st.button("Click here to auto-fill demo login credentials (admin/judge access)", key="judge_access_button"):
+                st.session_state.login_username_input = "GG"
+                st.session_state.login_password_input = "123"
+                st.rerun()
+        with col2:
+            if st.button("Dismiss", key="dismiss_judge_access"):
+                st.session_state.judge_access_dismissed = True
+                st.rerun()
+    # --- END HACKATHON JUDGE ACCESS ---
+
     username = st.text_input("Username:", key="login_username_input")
     password = st.text_input("Password:", type="password", key="login_password_input")
 
