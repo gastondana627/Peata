@@ -92,7 +92,7 @@ sympy==1.14.0
 tenacity==8.5.0
 tokenizers==0.21.4
 toml==0.10.2
-libsql_client
+sqlalchemy
 sqlalchemy-libsql
 torch==2.7.1
 tornado==6.5.1

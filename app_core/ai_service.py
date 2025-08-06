@@ -41,17 +41,7 @@ def load_gemma_model():
         st.session_state.gemma_model = {"model": model, "tokenizer": tokenizer}
         return st.session_state.gemma_model
     except Exception as e:
-        from huggingface_hub.utils import HfHubHTTPError
-
-        if isinstance(e, HfHubHTTPError) and e.response.status_code == 401:
-            st.error("Gemma Model Loading Failed: Unauthorized. "
-                     "This is likely due to a missing or invalid HF_TOKEN in your Streamlit secrets. "
-                     "Please add your Hugging Face token to the secrets to enable the offline model.")
-        else:
-            st.error(f"An unexpected error occurred while loading the Gemma model: {e}")
-
-        # Store failure state to inform the UI
-        st.session_state.gemma_model = None
+        st.error(f"Error loading Gemma model: {e}")
         return None
 
 # This is the main function called by your app.
