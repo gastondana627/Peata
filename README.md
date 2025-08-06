@@ -21,8 +21,21 @@ Peata is a web application that serves as a central hub for pet reunification an
 -   **Community-Driven Platform**: Users can create accounts, report lost pets, view found animals, and earn points for participating, creating a gamified and engaging experience that encourages community involvement.
 
 ---
+## 3. Key Features
 
-## 3. App Architecture
+-   **Secure User Authentication**: Users can sign up and log in to a persistent account to track their activity and points.
+-   **Lost & Found Pet Reporting**: Simple forms allow users to report a pet they have lost or one they have found, including uploading photos.
+-   **AI-Powered Image Matching**: When a pet is reported as found, the system automatically runs a two-stage image analysis to find potential matches from the shelter and lost pet database.
+-   **Dual-Mode AI Chatbot**: A helpful chatbot, powered by Vertex AI online and Gemma 2B-IT offline, is available to answer user questions.
+-   **Gamified Community Hub**:
+    -   **Points System**: Users earn points for reporting pets and sharing profiles on social media.
+    -   **Leaderboard**: A public leaderboard showcases the most active and helpful community members.
+-   **Adoptable Animals Showcase**: A browsable, paginated gallery of all animals currently available for adoption at the shelter.
+-   **User Profile & History**: A dedicated page where users can see their total points and a log of their reporting and sharing activities.
+
+---
+
+## 4. App Architecture
 
 Peata is designed with a modular and scalable architecture, primarily built around a Streamlit frontend that communicates with distinct AI and data management services.
 
