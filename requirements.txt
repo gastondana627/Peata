@@ -94,6 +94,7 @@ tokenizers==0.21.4
 toml==0.10.2
 sqlalchemy
 sqlalchemy-libsql
+libsql_client
 torch==2.7.1
 tornado==6.5.1
 tqdm==4.67.1
