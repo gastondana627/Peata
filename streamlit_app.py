@@ -933,6 +933,17 @@ elif st.session_state.view == "main_app" and st.session_state['username']:
     st.write("Here you can meet some of the animals available for adoption.")
     st.header(f"Welcome, {st.session_state['username']}! 🐾")
 
+    # --- Pre-load Gemma model in the background after login ---
+    if "gemma_model" not in st.session_state:
+        from app_core.ai_service import load_gemma_model
+        load_gemma_model()
+
+    # After attempting to load, check if it was successful and display a warning if not
+    if "gemma_model" in st.session_state and st.session_state.gemma_model is None:
+        st.warning("Could not load the offline AI model (Gemma). "
+                   "This is likely due to a missing or invalid `HF_TOKEN` in the app secrets. "
+                   "The chatbot will remain in Online-only mode.", icon="🤖")
+
     # Button to display user history in the sidebar
     display_user_history_button = st.sidebar.button("My History & Points", key="display_history_button")
     if display_user_history_button:
