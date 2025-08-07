@@ -139,8 +139,8 @@ st.markdown(
 
 
 # Diagnostics
-print("Contents of st.secrets:")
-print(st.secrets)
+# print("Contents of st.secrets:")
+# print(st.secrets)
 
 # Standard library
 import os

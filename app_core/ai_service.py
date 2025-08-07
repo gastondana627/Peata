@@ -6,12 +6,23 @@ from vertexai.generative_models import GenerativeModel
 from google.oauth2 import service_account
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
+import os
+import toml
 
 # This function initializes the primary online model (Vertex AI).
 def initialize_vertex_ai():
     if "vertex_ai_initialized" not in st.session_state:
         try:
-            creds_info = st.secrets["vertex_ai"]
+            # Manually load secrets from the Render secret file path
+            secrets_path = "/etc/secrets/secrets.toml"
+            if os.path.exists(secrets_path):
+                with open(secrets_path, "r") as f:
+                    secrets = toml.load(f)
+                creds_info = secrets["vertex_ai"]
+            else:
+                # Fallback for local development if you have a local secrets file
+                creds_info = st.secrets["vertex_ai"]
+
             vertexai.init(
                 project=creds_info["project_id"],
                 credentials=service_account.Credentials.from_service_account_info(creds_info)
@@ -28,10 +39,11 @@ def initialize_vertex_ai():
 def load_gemma_model():
     print("AI_SERVICE: Entered `load_gemma_model` function.")
     try:
-        hf_token = st.secrets.get("HF_TOKEN")
+        # Manually load the Hugging Face token from environment variables
+        hf_token = os.environ.get("HF_TOKEN")
         if not hf_token:
-            print("AI_SERVICE: HF_TOKEN not found in secrets.")
-            st.warning("Hugging Face token (HF_TOKEN) not found in secrets.")
+            print("AI_SERVICE: HF_TOKEN not found in environment variables.")
+            st.warning("Hugging Face token (HF_TOKEN) not found in environment variables.")
             return None
 
         print("AI_SERVICE: HF_TOKEN found. Proceeding to load model.")
